@@ -549,7 +549,7 @@ int main()
 #endif
 
     printf("RSA app booted\r\n");
-    blink(1, SEC_TO_CYCLES * 4, LED1 | LED2);
+    blink(1, SEC_TO_CYCLES * 5, LED1 | LED2);
 
     // The constants are specified MSB-to-LSB for legibility
     for (i = 0; i < NUM_DIGITS; i++)
