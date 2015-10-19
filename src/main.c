@@ -37,7 +37,7 @@ uint8_t usrBank[USRBANK_SIZE];
 
 #define SEC_TO_CYCLES 4000000 /* 4 MHz */
 
-#define PRINT_HEX_ASCII_COLS 8
+#define PRINT_HEX_ASCII_COLS 4
 
 /** @brief Type large enough to store a product of two digits */
 typedef uint16_t digit_t;
