@@ -33,7 +33,7 @@ uint8_t usrBank[USRBANK_SIZE];
 typedef uint16_t digit_t;
 
 /** @brief Multi-digit integer */
-typedef unsigned bigint_t[NUM_DIGITS];
+typedef unsigned bigint_t[NUM_DIGITS * 2];
 
 // Blocks are padded with these digits (on the MSD side). Padding value must be
 // chosen such that block value is less than the modulus. This is accomplished
@@ -74,20 +74,24 @@ static void blink(unsigned count, uint32_t duration, unsigned leds)
     }
 }
 
-void print_bigint(const bigint_t n)
+void print_bigint(const bigint_t n, unsigned digits)
 {
     int i;
-    for (i = NUM_DIGITS - 1; i < NUM_DIGITS; --i)
+    for (i = digits - 1; i >= 0; --i)
         printf("%x ", n[i]);
     printf("\r\n");
 }
 
-void mult(bigint_t out_block, bigint_t a, bigint_t b)
+void mult(bigint_t a, bigint_t b)
 {
     int i;
     unsigned digit;
     digit_t p, c, dp;
     digit_t carry = 0;
+    bigint_t product;
+
+    printf("mult: a = "); print_bigint(a, NUM_DIGITS);
+    printf("mult: b = "); print_bigint(b, NUM_DIGITS);
 
     for (digit = 0; digit < NUM_DIGITS * 2; ++digit) {
         printf("mult: d=%u\r\n", digit);
@@ -108,9 +112,14 @@ void mult(bigint_t out_block, bigint_t a, bigint_t b)
         c += p >> DIGIT_BITS;
         p &= DIGIT_MASK;
 
-        out_block[digit] = p;
+        product[digit] = p;
         carry = c;
     }
+
+    printf("mult: product = "); print_bigint(product, 2 * NUM_DIGITS);
+
+    for (i = 0; i < 2 * NUM_DIGITS; ++i)
+        a[i] = product[i];
 }
 
 bool reduce_normalizable(bigint_t m, const bigint_t n, unsigned d)
@@ -136,6 +145,8 @@ bool reduce_normalizable(bigint_t m, const bigint_t n, unsigned d)
             break;
         }
     }
+
+    printf("normalizable: %u\r\n", normalizable);
 
     return normalizable;
 }
@@ -262,6 +273,8 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
 
         product[i] = p;
     }
+
+    printf("reduce: multiply: product = "); print_bigint(product, 2 * NUM_DIGITS);
 }
 
 int reduce_compare(bigint_t a, bigint_t b)
@@ -316,6 +329,8 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
 
         a[i] = r;
     }
+
+    printf("reduce: add: sum = "); print_bigint(a, 2 * NUM_DIGITS);
 }
 
 void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
@@ -350,6 +365,8 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
 
         a[i] = r;
     }
+
+    printf("reduce: subtract: sum = "); print_bigint(a, 2 * NUM_DIGITS);
 }
 
 void reduce(bigint_t m, const bigint_t n)
@@ -366,6 +383,8 @@ void reduce(bigint_t m, const bigint_t n)
         printf("reduce digits: p[%u]=%x\r\n", d, m_d);
     } while (m_d == 0 && d > 0);
 
+    printf("reduce digits: d=%x\r\n", d);
+
     if (reduce_normalizable(m, n, d)) {
         reduce_normalize(m, n, d);
     } else if (d == NUM_DIGITS - 1) {
@@ -373,7 +392,7 @@ void reduce(bigint_t m, const bigint_t n)
         return;
     }
 
-    while (d > NUM_DIGITS) {
+    while (d >= NUM_DIGITS) {
         reduce_quotient(&q, m, n, d);
         reduce_multiply(qn, q, n, d);
         if (reduce_compare(m, qn) < 0)
@@ -381,22 +400,31 @@ void reduce(bigint_t m, const bigint_t n)
         reduce_subtract(m, qn, d);
         d--;
     }
+
+    printf("reduce: num = "); print_bigint(m, NUM_DIGITS);
 }
 
-void mod_mult(bigint_t out_block, bigint_t a, bigint_t b, const bigint_t n)
+void mod_mult(bigint_t a, bigint_t b, const bigint_t n)
 {
-    mult(out_block, a, b);
-    reduce(out_block, n);
+    mult(a, b);
+    reduce(a, n);
 }
 
 void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
 {
+    int i;
+
+    // Result initialized to 1
+    out_block[0] = 0x1;
+    for (i = 1; i < NUM_DIGITS; ++i)
+        out_block[i] = 0x0;
+
     while (e > 0) {
         printf("mod exp: e=%x\r\n", e);
 
         if (e & 0x1)
-            mod_mult(out_block, out_block, base, n);
-        mod_mult(base, base, base, n);
+            mod_mult(out_block, base, n);
+        mod_mult(base, base, n);
         e >>= 1;
     }
 }
@@ -409,6 +437,7 @@ int main()
     unsigned message_length;
     int i;
     digit_t e = E;
+    bigint_t n;
 
     WISP_init();
     UART_init();
@@ -421,6 +450,10 @@ int main()
     printf("RSA app booted\r\n");
     blink(1, SEC_TO_CYCLES * 2, LED1 | LED2);
 
+    // The constants are specified MSB-to-LSB for legibility
+    for (i = 0; i < NUM_DIGITS; i++)
+        n[i] = N[NUM_DIGITS - i - 1];
+
     message_length = sizeof(M);
     block_offset = 0;
     while (block_offset < message_length) {
@@ -429,9 +462,11 @@ int main()
         for (i = NUM_DIGITS - NUM_PAD_DIGITS; i < NUM_DIGITS; ++i)
             in_block[i] = PAD_DIGITS[i];
 
-        printf("in block: "); print_bigint(in_block);
-        mod_exp(out_block, in_block, e, N);
-        printf("out block: "); print_bigint(out_block);
+        printf("in block: "); print_bigint(in_block, NUM_DIGITS);
+        mod_exp(out_block, in_block, e, n);
+        printf("out block: "); print_bigint(out_block, NUM_DIGITS);
+
+        block_offset += NUM_DIGITS - NUM_PAD_DIGITS;
 
         delay = 0xfffff;
         while (delay--);
