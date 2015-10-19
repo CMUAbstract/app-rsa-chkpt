@@ -81,9 +81,257 @@ void print_bigint(const bigint_t n)
     printf("\r\n");
 }
 
+void mult(bigint_t out_block, bigint_t a, bigint_t b)
+{
+    unsigned digit;
+    digit_t p, carry, c;
+
+    for (digit = 0; digit < NUM_DIGITS * 2; ++digit) {
+        printf("mult: d=%u\r\n", digit);
+
+        p = carry;
+        c = 0;
+        for (i = 0; i < NUM_DIGITS; ++i) {
+            if (digit - i >= 0 && digit - i < NUM_DIGITS) {
+                dp = a[digit - i] * b[i]
+
+                c += dp >> DIGIT_BITS;
+                p += dp & DIGIT_MASK;
+
+                printf("mult: i=%u a=%x b=%x p=%x\r\n", i, a, b, p);
+            }
+        }
+
+        c += p >> DIGIT_BITS;
+        p &= DIGIT_MASK;
+
+        out_block[digit] = p;
+    }
+}
+
+void reduce_quotient(digit_t *quotient, bigint_t num, const bigint_t n)
+{
+    digit_t q;
+
+    n[1]  = n[NUM_DIGITS - 1];
+    n[0] = n[NUM_DIGITS - 2];
+
+    // Divisor, derived from modulus, for refining quotient guess into exact value
+    n_div = ((n[1]<< DIGIT_BITS) + n[0]);
+
+    n_n = n[NUM_DIGITS - 1];
+
+    m[2] = num[d];
+    m[1] = num[d - 1];
+    m[0] = num[d - 2];
+
+    printf("reduce: quotient: n_n=%x m[d]=%x\r\n", n_n, m[2]);
+
+    // Choose an initial guess for quotient
+    if (m[2] == n_n) {
+        q = (1 << DIGIT_BITS) - 1;
+    } else {
+        q = ((m[2] << DIGIT_BITS) + m[1]) / n_n;
+    }
+
+    // Refine quotient guess
+
+    // NOTE: An alternative to composing the digits into one variable, is to
+    // have a loop that does the comparison digit by digit to implement the
+    // condition of the while loop below.
+    n_q = ((uint32_t)m[2] << (2 * DIGIT_BITS)) + (m[1] << DIGIT_BITS) + m[0];
+
+    printf("reduce: quotient: m[d]=%x m[d-1]=%x m[d-2]=%x n_q=%x%x\r\n",
+           m[2], m[1], m[0],
+           (uint16_t)((n_q >> 16) & 0xffff), (uint16_t)(n_q & 0xffff));
+
+    printf("reduce: quotient: q0=%x\r\n", q);
+
+    q++;
+    do {
+        q--;
+        qn = (uint32_t)n_div * q;
+        printf("reduce: quotient: q=%x qn=%x%x\r\n", q,
+              (uint16_t)((qn >> 16) & 0xffff), (uint16_t)(qn & 0xffff));
+    } while (qn > n_q);
+
+    // This is still not the final quotient, it may be off by one,
+    // which we determine and fix in the 'compare' and 'add' steps.
+    printf("reduce: quotient: q=%x\r\n", q);
+
+    *quotient = q;
+}
+
+void reduce_multiply(bigint_t product, unsigned d, digit_t q, const bigint_t n)
+{
+    unsigned offset;
+    bigint_t m;
+    unsigned c;
+
+    // As part of this task, we also perform the left-shifting of the q*m
+    // product by radix^(digit-NUM_DIGITS), where NUM_DIGITS is the number
+    // of digits in the modulus. We implement this by fetching the digits
+    // of number being reduced at that offset.
+    offset = d - NUM_DIGITS;
+    printf("reduce: multiply: offset=%u\r\n", offset);
+
+    // Left-shift zeros
+    for (i = 0; i < offset; ++i)
+        product[i] = 0;
+
+    c = 0;
+    for (i = offset; i < 2 * NUM_DIGITS; ++i) {
+
+        // This condition creates the left-shifted zeros.
+        // TODO: consider adding number of digits to go along with the 'product' field,
+        // then we would not have to zero out the MSDs
+        m = c;
+        if (i < offset + NUM_DIGITS) {
+            nd = n[i - offset];
+            m += q * nd;
+        } else {
+            nd = 0;
+            // TODO: could break out of the loop  in this case (after CHAN_OUT)
+        }
+
+        printf("reduce: multiply: n[%u]=%x q=%x c=%x m[%u]=%x\r\n",
+               i - offset, nd, q, c, i, m);
+
+        c = m >> DIGIT_BITS;
+        m &= DIGIT_MASK;
+
+        product[i] = m;
+    }
+}
+
+int reduce_compare(bigint_t a, bigint_t b)
+{
+    int i;
+    int relation = 0;
+
+    for (i = NUM_DIGITS * 2 - 1; i >= 0; --i) {
+        if (a > b) {
+            relation = 1;
+            break;
+        } else if (a < b) {
+            relation = -1;
+            break;
+        }
+    }
+
+    return relation;
+}
+
+void reduce_add(bigint_t sum, unsigned d, bigint_t a, bigint_t b)
+{
+    int i;
+    unsigned offset;
+    digit_t r;
+
+    // TODO: factor out shift outside of this task
+    // Part of this task is to shift modulus by radix^(digit - NUM_DIGITS)
+    offset = d - NUM_DIGITS;
+
+    for (i = offset; i < 2 * NUM_DIGITS; ++i) {
+        m = a[i];
+
+        // Shifted index of the modulus digit
+        j = i - offset;
+
+        if (i < offset + NUM_DIGITS) {
+            n = b[j];
+        } else {
+            n = 0;
+            j = 0; // a bit ugly, we want 'nan', but ok, since for output only
+            // TODO: could break out of the loop in this case (after CHAN_OUT)
+        }
+
+        r = c + m + n;
+
+        printf("reduce: add: m[%u]=%x n[%u]=%x c=%x r=%x\r\n", i, m, j, n, c, r);
+
+        c = r >> DIGIT_BITS;
+        r &= DIGIT_MASK;
+
+        sum[i] = r;
+    }
+}
+
+void reduce_subtract(bigint_t sum, bigint_t a, bigint_t b)
+{
+    int i;
+    digit_t m, s, r, qn;
+    unsigned d, borrow, offset;
+
+    // TODO: factor out shifting logic from this task
+    // The qn product had been shifted by this offset, no need to subtract the zeros
+    offset = d - NUM_DIGITS;
+
+    borrow = 0;
+    for (i = 0; i < 2 * NUM_DIGITS; ++i) {
+        m = a[i];
+
+        // For calling the print task we need to proxy to it values that we do not modify
+        if (i >= offset) {
+            qn = b[i];
+
+            s = qn + borrow;
+            if (m < s) {
+                m += 1 << DIGIT_BITS;
+                borrow = 1;
+            } else {
+                borrow = 0;
+            }
+            r = m - s;
+
+            printf("reduce: subtract: m[%u]=%x qn[%u]=%x b=%u r=%x\r\n",
+                   i, m, i, qn, borrow, r);
+
+            sum[i] = r;
+        } else {
+            r = m;
+        }
+    }
+}
+
+void reduce(bigint_t num, const bigint_t n)
+{
+    digit_t n_div;
+    digit_t n_n;
+    digit_t q;
+    bigint_t m, qm;
+    uint32_t qn, n_q; // must hold at least 3 digits
+
+    unsigned d;
+
+    if (normalizable(m))
+        normalize(m);
+
+    // Start reduction loop at most significant non-zero digit
+    d = 2 * NUM_DIGITS;
+    do {
+        d--;
+        m = num[d];
+        printf("reduce digits: p[%u]=%x\r\n", d, m);
+    } while (m == 0 && d > 0);
+
+    while (d > NUM_DIGITS) {
+
+        reduce_quotient(d, q, num, n);
+
+        reduce_multiply(qn, q, n); 
+        if (reduce_compare(num, qn) < 0)
+            reduce_add(num, num, d, n);
+        reduce_subtract(num, num, qn);
+
+        d--;
+    }
+}
+
 void mod_mult(bigint_t out_block, bigint_t a, bigint_t b, const bigint_t n)
 {
-    // TODO
+    mult(out_block, a, b);
+    reduce(out_block, n);
 }
 
 void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
