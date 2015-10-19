@@ -7,6 +7,10 @@
 
 #include <wisp-base.h>
 
+#ifdef CONFIG_LIBEDB_PRINTF
+#include <libedb/edb.h>
+#endif
+
 #include "pins.h"
 
 // #define VERBOSE
@@ -20,6 +24,15 @@
 #define PORT_LED_DIR P1DIR
 #define PORT_LED_OUT P1OUT
 #define PIN_LED      1
+
+#ifdef CONFIG_LIBEDB_PRINTF
+#define printf(...) BARE_PRINTF(__VA_ARGS__)
+#else // CONFIG_LIBEDB_PRINTF
+#ifndef CONFIG_LIBMSPCONSOLE_PRINTF
+#define printf(...)
+#endif // CONFIG_LIBMSPCONSOLE_PRINTF
+#endif
+
 
 // For wisp-base
 uint8_t usrBank[USRBANK_SIZE];
@@ -516,7 +529,12 @@ int main()
     pubkey_t pubkey;
 
     WISP_init();
+
+#if defined(CONFIG_LIBEDB_PRINTF)
+    BARE_PRINTF_ENABLE();
+#elif defined(CONFIG_LIBMSPCONSOLE_PRINTF)
     UART_init();
+#endif
 
     __enable_interrupt();
 
