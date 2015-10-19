@@ -45,6 +45,11 @@ typedef uint16_t digit_t;
 /** @brief Multi-digit integer */
 typedef unsigned bigint_t[NUM_DIGITS * 2];
 
+typedef struct {
+    bigint_t n; // modulus
+    digit_t e;  // exponent
+} pubkey_t;
+
 // Blocks are padded with these digits (on the MSD side). Padding value must be
 // chosen such that block value is less than the modulus. This is accomplished
 // by any value below 0x80, because the modulus is restricted to be above
@@ -60,12 +65,13 @@ static const bigint_t N = { 0x80, 0x49, 0x60, 0x01 }; // modulus (see note below
 static const digit_t E = 0x11; // encryption exponent
 
 // padded message blocks (padding is the first byte (0x01), rest is payload)
-static const uint8_t plaintext[] = {
+static const uint8_t PLAINTEXT[] = {
     0x55, 0x3D, 0xEF, 0xC0, 0x4A, 0x92,
 };
 
 #define CYPHERTEXT_BUF_SIZE 32
-static uint8_t cyphertext[CYPHERTEXT_BUF_SIZE];
+static uint8_t CYPHERTEXT[CYPHERTEXT_BUF_SIZE];
+static unsigned CYPHERTEXT_LEN = 0;
 
 static void delay(uint32_t cycles)
 {
@@ -466,15 +472,46 @@ void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
     }
 }
 
-int main()
+void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
+             const uint8_t *message, unsigned message_length, pubkey_t *k)
 {
-    uint32_t delay;
+    int i;
     bigint_t in_block, out_block;
     unsigned in_block_offset, out_block_offset;
+
+    in_block_offset = 0;
+    out_block_offset = 0;
+    while (in_block_offset < message_length) {
+        for (i = 0; i < NUM_DIGITS - NUM_PAD_DIGITS; ++i)
+            in_block[i] = (in_block_offset + i < message_length) ?
+                                message[in_block_offset + i] : 0x00;
+        for (i = NUM_DIGITS - NUM_PAD_DIGITS; i < NUM_DIGITS; ++i)
+            in_block[i] = PAD_DIGITS[i];
+
+        LOG("in block: "); log_bigint(in_block, NUM_DIGITS); LOG("\r\n");
+        mod_exp(out_block, in_block, k->e, k->n);
+        LOG("out block: "); log_bigint(out_block, NUM_DIGITS); LOG("\r\n");
+
+        for (i = 0; i < NUM_DIGITS; ++i)
+            cyphertext[out_block_offset + i] = out_block[i];
+
+        in_block_offset += NUM_DIGITS - NUM_PAD_DIGITS;
+        out_block_offset += NUM_DIGITS;
+
+#ifdef VERBOSE
+        uint32_t delay = 0xfffff;
+        while (delay--);
+#endif
+    }
+
+    *cyphertext_len = out_block_offset;
+}
+
+int main()
+{
     unsigned message_length;
     int i;
-    digit_t e = E;
-    bigint_t n;
+    pubkey_t pubkey;
 
     WISP_init();
     UART_init();
@@ -489,38 +526,18 @@ int main()
 
     // The constants are specified MSB-to-LSB for legibility
     for (i = 0; i < NUM_DIGITS; i++)
-        n[i] = N[NUM_DIGITS - i - 1];
+        pubkey.n[i] = N[NUM_DIGITS - i - 1];
+    pubkey.e = E;
 
-    message_length = sizeof(plaintext);
+    message_length = sizeof(PLAINTEXT);
 
-    printf("Message:\r\n"); print_hex_ascii(plaintext, message_length);
-    printf("Public key: N = "); print_bigint(n, NUM_DIGITS);
-    printf(" E = %x\r\n", e);
+    printf("Message:\r\n"); print_hex_ascii(PLAINTEXT, message_length);
+    printf("Public key: N = "); print_bigint(pubkey.n, NUM_DIGITS);
+    printf(" E = %x\r\n", pubkey.e);
 
-    in_block_offset = 0;
-    out_block_offset = 0;
-    while (in_block_offset < message_length) {
-        for (i = 0; i < NUM_DIGITS - NUM_PAD_DIGITS; ++i)
-            in_block[i] = (in_block_offset + i < message_length) ?
-                                plaintext[in_block_offset + i] : 0x00;
-        for (i = NUM_DIGITS - NUM_PAD_DIGITS; i < NUM_DIGITS; ++i)
-            in_block[i] = PAD_DIGITS[i];
+    encrypt(CYPHERTEXT, &CYPHERTEXT_LEN, PLAINTEXT, message_length, &pubkey);
 
-        LOG("in block: "); log_bigint(in_block, NUM_DIGITS); LOG("\r\n");
-        mod_exp(out_block, in_block, e, n);
-        LOG("out block: "); log_bigint(out_block, NUM_DIGITS); LOG("\r\n");
-
-        for (i = 0; i < NUM_DIGITS; ++i)
-            cyphertext[out_block_offset + i] = out_block[i];
-
-        in_block_offset += NUM_DIGITS - NUM_PAD_DIGITS;
-        out_block_offset += NUM_DIGITS;
-
-        delay = 0xfffff;
-        while (delay--);
-    }
-
-    printf("Cyphertext:\r\n"); print_hex_ascii(cyphertext, out_block_offset);
+    printf("Cyphertext:\r\n"); print_hex_ascii(CYPHERTEXT, CYPHERTEXT_LEN);
 
     while (1) {
         blink(1, SEC_TO_CYCLES, LED1 | LED2);
