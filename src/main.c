@@ -518,11 +518,18 @@ int main()
 
     __enable_interrupt();
 
-    PORT_LED_DIR |= PIN_LED;
-    PORT_LED_OUT |= PIN_LED;
+    GPIO(PORT_LED_1, DIR) |= BIT(PIN_LED_1);
+    GPIO(PORT_LED_2, DIR) |= BIT(PIN_LED_2);
+#if defined(PORT_LED_3)
+    GPIO(PORT_LED_3, DIR) |= BIT(PIN_LED_3);
+#endif
+
+#if defined(PORT_LED_3) // when available, this LED indicates power-on
+    GPIO(PORT_LED_3, OUT) |= BIT(PIN_LED_3);
+#endif
 
     printf("RSA app booted\r\n");
-    blink(1, SEC_TO_CYCLES * 2, LED1 | LED2);
+    blink(1, SEC_TO_CYCLES * 4, LED1 | LED2);
 
     // The constants are specified MSB-to-LSB for legibility
     for (i = 0; i < NUM_DIGITS; i++)
@@ -535,12 +542,16 @@ int main()
     printf("Public key: N = "); print_bigint(pubkey.n, NUM_DIGITS);
     printf(" E = %x\r\n", pubkey.e);
 
+    GPIO(PORT_LED_1, OUT) |= BIT(PIN_LED_1);
+
     encrypt(CYPHERTEXT, &CYPHERTEXT_LEN, PLAINTEXT, message_length, &pubkey);
+
+    GPIO(PORT_LED_1, OUT) &= ~BIT(PIN_LED_1);
 
     printf("Cyphertext:\r\n"); print_hex_ascii(CYPHERTEXT, CYPHERTEXT_LEN);
 
     while (1) {
-        blink(1, SEC_TO_CYCLES, LED1 | LED2);
+        blink(1, SEC_TO_CYCLES, LED2);
     }
 
     return 0;
