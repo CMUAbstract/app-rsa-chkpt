@@ -70,8 +70,14 @@ typedef struct {
 static const uint8_t PAD_DIGITS[] = { 0x01 };
 #define NUM_PAD_DIGITS (sizeof(PAD_DIGITS) / sizeof(PAD_DIGITS[0]))
 
-static const bigint_t N = { 0x80, 0x49, 0x60, 0x01 }; // modulus (see note below)
-static const digit_t E = 0x11; // encryption exponent
+// To generate a key pair:
+// $ openssl genrsa -out private.pem -3 32
+// $ openssl rsa -out keys.txt -text -in private.pem
+// Note: genrsa is superceded by genpkey, but the latter supports only >256-bit
+
+static const bigint_t N = { 0xaa, 0x49, 0x6a, 0x45}; // modulus (see note below)
+static const digit_t E = 0x3; // public exponent
+// private exponent for the above: 0x71853073
 
 static const unsigned char PLAINTEXT[] = "Hello, World!";
 
