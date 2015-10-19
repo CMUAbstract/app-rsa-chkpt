@@ -4,7 +4,7 @@ OBJECTS = \
 	main.o \
 
 LIBCHAIN_ENABLE_DIAGNOSTICS ?= 0
-CONFIG_PRINTF_LIB ?= libmspconsole
+CONFIG_PRINTF_LIB ?= libedb
 
 include $(MAKER_ROOT)/Makefile.gcc
 
