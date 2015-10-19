@@ -70,10 +70,6 @@ typedef struct {
 static const uint8_t PAD_DIGITS[] = { 0x01 };
 #define NUM_PAD_DIGITS (sizeof(PAD_DIGITS) / sizeof(PAD_DIGITS[0]))
 
-// Test input
-static const uint8_t A[] = { 0x40, 0x30, 0x20, 0x10 };
-static const uint8_t B[] = { 0xB0, 0xA0, 0x90, 0x80 };
-
 static const bigint_t N = { 0x80, 0x49, 0x60, 0x01 }; // modulus (see note below)
 static const digit_t E = 0x11; // encryption exponent
 
