@@ -114,6 +114,8 @@ void print_hex_ascii(const uint8_t *m, unsigned len)
     for (i = 0; i < len; i += PRINT_HEX_ASCII_COLS) {
         for (j = 0; j < PRINT_HEX_ASCII_COLS && i + j < len; ++j)
             printf("%x ", m[i + j]);
+        for (; j < PRINT_HEX_ASCII_COLS; ++j)
+            printf("     ");
         printf(" ");
         for (j = 0; j < PRINT_HEX_ASCII_COLS && i + j < len; ++j) {
             char c = m[i + j];
