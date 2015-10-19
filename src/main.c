@@ -509,7 +509,7 @@ int main()
         LOG("in block: "); log_bigint(in_block, NUM_DIGITS); LOG("\r\n");
         mod_exp(out_block, in_block, e, n);
         LOG("out block: "); log_bigint(out_block, NUM_DIGITS); LOG("\r\n");
-        
+
         for (i = 0; i < NUM_DIGITS; ++i)
             cyphertext[out_block_offset + i] = out_block[i];
 
