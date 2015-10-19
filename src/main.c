@@ -81,8 +81,21 @@ void print_bigint(const bigint_t n)
     printf("\r\n");
 }
 
-void mod_exp(bigint_t out_block, const bigint_t in_block, const digit_t e, const bigint_t n)
+void mod_mult(bigint_t out_block, bigint_t a, bigint_t b, const bigint_t n)
 {
+    // TODO
+}
+
+void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
+{
+    while (e > 0) {
+        printf("mod exp: e=%x\r\n", e);
+
+        if (e & 0x1)
+            mod_mult(out_block, out_block, base, n);
+        mod_mult(base, base, base, n);
+        e >>= 1;
+    }
 }
 
 int main()
@@ -92,6 +105,7 @@ int main()
     unsigned block_offset;
     unsigned message_length;
     int i;
+    digit_t e = E;
 
     WISP_init();
     UART_init();
@@ -113,7 +127,7 @@ int main()
             in_block[i] = PAD_DIGITS[i];
 
         printf("in block: "); print_bigint(in_block);
-        mod_exp(out_block, in_block, E, N);
+        mod_exp(out_block, in_block, e, N);
         printf("out block: "); print_bigint(out_block);
 
         delay = 0xfffff;
