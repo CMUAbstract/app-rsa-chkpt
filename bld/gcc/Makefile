@@ -16,6 +16,7 @@ ifeq ($(CONFIG_PRINTF_LIB),libedb)
 CFLAGS += -DCONFIG_LIBEDB_PRINTF
 LIBS += -ledb
 LFLAGS += -L$(LIBEDB_ROOT)/gcc
+CFLAGS += -I$(LIBEDB_ROOT)/src/include
 endif
 
 ifeq ($(CONFIG_PRINTF_LIB),libmspconsole)
