@@ -9,6 +9,14 @@
 
 #include "pins.h"
 
+// #define VERBOSE
+
+#ifdef VERBOSE
+#define LOG printf
+#else
+#define LOG(...)
+#endif // VERBOSE
+
 #define PORT_LED_DIR P1DIR
 #define PORT_LED_OUT P1OUT
 #define PIN_LED      1
@@ -28,6 +36,8 @@ uint8_t usrBank[USRBANK_SIZE];
 #define LED2 (1 << 1)
 
 #define SEC_TO_CYCLES 4000000 /* 4 MHz */
+
+#define PRINT_HEX_ASCII_COLS 8
 
 /** @brief Type large enough to store a product of two digits */
 typedef uint16_t digit_t;
@@ -50,9 +60,12 @@ static const bigint_t N = { 0x80, 0x49, 0x60, 0x01 }; // modulus (see note below
 static const digit_t E = 0x11; // encryption exponent
 
 // padded message blocks (padding is the first byte (0x01), rest is payload)
-static const uint8_t M[] = {
+static const uint8_t plaintext[] = {
     0x55, 0x3D, 0xEF, 0xC0, 0x4A, 0x92,
 };
+
+#define CYPHERTEXT_BUF_SIZE 32
+static uint8_t cyphertext[CYPHERTEXT_BUF_SIZE];
 
 static void delay(uint32_t cycles)
 {
@@ -79,7 +92,31 @@ void print_bigint(const bigint_t n, unsigned digits)
     int i;
     for (i = digits - 1; i >= 0; --i)
         printf("%x ", n[i]);
-    printf("\r\n");
+}
+
+void log_bigint(const bigint_t n, unsigned digits)
+{
+    int i;
+    for (i = digits - 1; i >= 0; --i)
+        LOG("%x ", n[i]);
+}
+
+void print_hex_ascii(const uint8_t *m, unsigned len)
+{
+    int i, j;
+   
+    for (i = 0; i < len; i += PRINT_HEX_ASCII_COLS) {
+        for (j = 0; j < PRINT_HEX_ASCII_COLS && i + j < len; ++j)
+            printf("%x ", m[i + j]);
+        printf(" ");
+        for (j = 0; j < PRINT_HEX_ASCII_COLS && i + j < len; ++j) {
+            char c = m[i + j];
+            if (!(32 <= c && c <= 127)) // not printable
+                c = '.';
+            printf("%c", c);
+        }
+        printf("\r\n");
+    }
 }
 
 void mult(bigint_t a, bigint_t b)
@@ -90,11 +127,11 @@ void mult(bigint_t a, bigint_t b)
     digit_t carry = 0;
     bigint_t product;
 
-    printf("mult: a = "); print_bigint(a, NUM_DIGITS);
-    printf("mult: b = "); print_bigint(b, NUM_DIGITS);
+    LOG("mult: a = "); log_bigint(a, NUM_DIGITS); LOG("\r\n");
+    LOG("mult: b = "); log_bigint(b, NUM_DIGITS); LOG("\r\n");
 
     for (digit = 0; digit < NUM_DIGITS * 2; ++digit) {
-        printf("mult: d=%u\r\n", digit);
+        LOG("mult: d=%u\r\n", digit);
 
         p = carry;
         c = 0;
@@ -105,7 +142,7 @@ void mult(bigint_t a, bigint_t b)
                 c += dp >> DIGIT_BITS;
                 p += dp & DIGIT_MASK;
 
-                printf("mult: i=%u a=%x b=%x p=%x\r\n", i, a[digit - i], b[i], p);
+                LOG("mult: i=%u a=%x b=%x p=%x\r\n", i, a[digit - i], b[i], p);
             }
         }
 
@@ -116,7 +153,7 @@ void mult(bigint_t a, bigint_t b)
         carry = c;
     }
 
-    printf("mult: product = "); print_bigint(product, 2 * NUM_DIGITS);
+    LOG("mult: product = "); log_bigint(product, 2 * NUM_DIGITS); LOG("\r\n");
 
     for (i = 0; i < 2 * NUM_DIGITS; ++i)
         a[i] = product[i];
@@ -130,13 +167,13 @@ bool reduce_normalizable(bigint_t m, const bigint_t n, unsigned d)
     bool normalizable = true;
 
     offset = d + 1 - NUM_DIGITS; // TODO: can this go below zero
-    printf("reduce: normalizable: d=%u offset=%u\r\n", d, offset);
+    LOG("reduce: normalizable: d=%u offset=%u\r\n", d, offset);
 
     for (i = d; i >= 0; --i) {
         m_d = m[i];
         n_d = n[i - offset];
 
-        printf("normalizable: m[%u]=%x n[%u]=%x\r\n", i, m_d, i - offset, n_d);
+        LOG("normalizable: m[%u]=%x n[%u]=%x\r\n", i, m_d, i - offset, n_d);
 
         if (m_d > n_d) {
             break;
@@ -146,7 +183,7 @@ bool reduce_normalizable(bigint_t m, const bigint_t n, unsigned d)
         }
     }
 
-    printf("normalizable: %u\r\n", normalizable);
+    LOG("normalizable: %u\r\n", normalizable);
 
     return normalizable;
 }
@@ -173,7 +210,7 @@ void reduce_normalize(bigint_t m, const bigint_t n, unsigned digit)
         }
         d = m_d - s;
 
-        printf("normalize: m[%u]=%x n[%u]=%x b=%u d=%x\r\n",
+        LOG("normalize: m[%u]=%x n[%u]=%x b=%u d=%x\r\n",
                 i + offset, m_d, i, n_d, borrow, d);
 
         m[i + offset] = d;
@@ -195,7 +232,7 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     m_d[1] = m[d - 1];
     m_d[0] = m[d - 2];
 
-    printf("reduce: quotient: n_n=%x m[d]=%x\r\n", n_n, m[2]);
+    LOG("reduce: quotient: n_n=%x m[d]=%x\r\n", n_n, m[2]);
 
     // Choose an initial guess for quotient
     if (m_d[2] == n_n) {
@@ -211,23 +248,23 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     // condition of the while loop below.
     n_q = ((uint32_t)m_d[2] << (2 * DIGIT_BITS)) + (m_d[1] << DIGIT_BITS) + m_d[0];
 
-    printf("reduce: quotient: m[d]=%x m[d-1]=%x m[d-2]=%x n_q=%x%x\r\n",
+    LOG("reduce: quotient: m[d]=%x m[d-1]=%x m[d-2]=%x n_q=%x%x\r\n",
            m_d[2], m_d[1], m_d[0],
            (uint16_t)((n_q >> 16) & 0xffff), (uint16_t)(n_q & 0xffff));
 
-    printf("reduce: quotient: q0=%x\r\n", q);
+    LOG("reduce: quotient: q0=%x\r\n", q);
 
     q++;
     do {
         q--;
         qn = (uint32_t)n_div * q;
-        printf("reduce: quotient: q=%x qn=%x%x\r\n", q,
+        LOG("reduce: quotient: q=%x qn=%x%x\r\n", q,
               (uint16_t)((qn >> 16) & 0xffff), (uint16_t)(qn & 0xffff));
     } while (qn > n_q);
 
     // This is still not the final quotient, it may be off by one,
     // which we determine and fix in the 'compare' and 'add' steps.
-    printf("reduce: quotient: q=%x\r\n", q);
+    LOG("reduce: quotient: q=%x\r\n", q);
 
     *quotient = q;
 }
@@ -244,7 +281,7 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
     // of digits in the modulus. We implement this by fetching the digits
     // of number being reduced at that offset.
     offset = d - NUM_DIGITS;
-    printf("reduce: multiply: offset=%u\r\n", offset);
+    LOG("reduce: multiply: offset=%u\r\n", offset);
 
     // Left-shift zeros
     for (i = 0; i < offset; ++i)
@@ -265,7 +302,7 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
             // TODO: could break out of the loop  in this case (after CHAN_OUT)
         }
 
-        printf("reduce: multiply: n[%u]=%x q=%x c=%x m[%u]=%x\r\n",
+        LOG("reduce: multiply: n[%u]=%x q=%x c=%x m[%u]=%x\r\n",
                i - offset, nd, q, c, i, p);
 
         c = p >> DIGIT_BITS;
@@ -274,7 +311,7 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
         product[i] = p;
     }
 
-    printf("reduce: multiply: product = "); print_bigint(product, 2 * NUM_DIGITS);
+    LOG("reduce: multiply: product = "); log_bigint(product, 2 * NUM_DIGITS); LOG("\r\n");
 }
 
 int reduce_compare(bigint_t a, bigint_t b)
@@ -322,7 +359,7 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
 
         r = c + m + n;
 
-        printf("reduce: add: m[%u]=%x n[%u]=%x c=%x r=%x\r\n", i, m, j, n, c, r);
+        LOG("reduce: add: m[%u]=%x n[%u]=%x c=%x r=%x\r\n", i, m, j, n, c, r);
 
         c = r >> DIGIT_BITS;
         r &= DIGIT_MASK;
@@ -330,7 +367,7 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
         a[i] = r;
     }
 
-    printf("reduce: add: sum = "); print_bigint(a, 2 * NUM_DIGITS);
+    LOG("reduce: add: sum = "); log_bigint(a, 2 * NUM_DIGITS); LOG("\r\n");
 }
 
 void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
@@ -343,7 +380,7 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
     // The qn product had been shifted by this offset, no need to subtract the zeros
     offset = d - NUM_DIGITS;
 
-    printf("reduce: subtract: d=%u offset=%u\r\n", d, offset);
+    LOG("reduce: subtract: d=%u offset=%u\r\n", d, offset);
 
     borrow = 0;
     for (i = offset; i < 2 * NUM_DIGITS; ++i) {
@@ -360,13 +397,13 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
         }
         r = m - s;
 
-        printf("reduce: subtract: m[%u]=%x qn[%u]=%x b=%u r=%x\r\n",
+        LOG("reduce: subtract: m[%u]=%x qn[%u]=%x b=%u r=%x\r\n",
                i, m, i, qn, borrow, r);
 
         a[i] = r;
     }
 
-    printf("reduce: subtract: sum = "); print_bigint(a, 2 * NUM_DIGITS);
+    LOG("reduce: subtract: sum = "); log_bigint(a, 2 * NUM_DIGITS); LOG("\r\n");
 }
 
 void reduce(bigint_t m, const bigint_t n)
@@ -380,15 +417,15 @@ void reduce(bigint_t m, const bigint_t n)
     do {
         d--;
         m_d = m[d];
-        printf("reduce digits: p[%u]=%x\r\n", d, m_d);
+        LOG("reduce digits: p[%u]=%x\r\n", d, m_d);
     } while (m_d == 0 && d > 0);
 
-    printf("reduce digits: d=%x\r\n", d);
+    LOG("reduce digits: d=%x\r\n", d);
 
     if (reduce_normalizable(m, n, d)) {
         reduce_normalize(m, n, d);
     } else if (d == NUM_DIGITS - 1) {
-        printf("reduce: done: message < modulus\r\n");
+        LOG("reduce: done: message < modulus\r\n");
         return;
     }
 
@@ -401,7 +438,7 @@ void reduce(bigint_t m, const bigint_t n)
         d--;
     }
 
-    printf("reduce: num = "); print_bigint(m, NUM_DIGITS);
+    LOG("reduce: num = "); log_bigint(m, NUM_DIGITS); LOG("\r\n");
 }
 
 void mod_mult(bigint_t a, bigint_t b, const bigint_t n)
@@ -420,7 +457,7 @@ void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
         out_block[i] = 0x0;
 
     while (e > 0) {
-        printf("mod exp: e=%x\r\n", e);
+        LOG("mod exp: e=%x\r\n", e);
 
         if (e & 0x1)
             mod_mult(out_block, base, n);
@@ -433,7 +470,7 @@ int main()
 {
     uint32_t delay;
     bigint_t in_block, out_block;
-    unsigned block_offset;
+    unsigned in_block_offset, out_block_offset;
     unsigned message_length;
     int i;
     digit_t e = E;
@@ -454,25 +491,36 @@ int main()
     for (i = 0; i < NUM_DIGITS; i++)
         n[i] = N[NUM_DIGITS - i - 1];
 
-    message_length = sizeof(M);
-    block_offset = 0;
-    while (block_offset < message_length) {
+    message_length = sizeof(plaintext);
+
+    printf("Message:\r\n"); print_hex_ascii(plaintext, message_length);
+    printf("Public key: N = "); print_bigint(n, NUM_DIGITS);
+    printf(" E = %x\r\n", e);
+
+    in_block_offset = 0;
+    out_block_offset = 0;
+    while (in_block_offset < message_length) {
         for (i = 0; i < NUM_DIGITS - NUM_PAD_DIGITS; ++i)
-            in_block[i] = (block_offset + i < message_length) ? M[block_offset + i] : 0x00;
+            in_block[i] = (in_block_offset + i < message_length) ?
+                                plaintext[in_block_offset + i] : 0x00;
         for (i = NUM_DIGITS - NUM_PAD_DIGITS; i < NUM_DIGITS; ++i)
             in_block[i] = PAD_DIGITS[i];
 
-        printf("in block: "); print_bigint(in_block, NUM_DIGITS);
+        LOG("in block: "); log_bigint(in_block, NUM_DIGITS); LOG("\r\n");
         mod_exp(out_block, in_block, e, n);
-        printf("out block: "); print_bigint(out_block, NUM_DIGITS);
+        LOG("out block: "); log_bigint(out_block, NUM_DIGITS); LOG("\r\n");
+        
+        for (i = 0; i < NUM_DIGITS; ++i)
+            cyphertext[out_block_offset + i] = out_block[i];
 
-        block_offset += NUM_DIGITS - NUM_PAD_DIGITS;
+        in_block_offset += NUM_DIGITS - NUM_PAD_DIGITS;
+        out_block_offset += NUM_DIGITS;
 
         delay = 0xfffff;
         while (delay--);
     }
 
-    printf("message done\r\n");
+    printf("Cyphertext:\r\n"); print_hex_ascii(cyphertext, out_block_offset);
 
     while (1) {
         blink(1, SEC_TO_CYCLES, LED1 | LED2);
