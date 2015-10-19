@@ -5,11 +5,20 @@ OBJECTS = \
 
 LIBCHAIN_ENABLE_DIAGNOSTICS ?= 0
 CONFIG_PRINTF_LIB ?= libedb
+BOARD ?= wisp
 
 include $(MAKER_ROOT)/Makefile.gcc
 
 ifeq ($(LIBCHAIN_ENABLE_DIAGNOSTICS),1)
 CFLAGS += -DLIBCHAIN_ENABLE_DIAGNOSTICS
+endif
+
+ifeq ($(BOARD),wisp)
+CFLAGS += -DBOARD_WISP
+endif
+
+ifeq ($(BOARD),mspts430)
+CFLAGS += -DBOARD_MSP_TS430
 endif
 
 ifeq ($(CONFIG_PRINTF_LIB),libedb)
