@@ -14,6 +14,7 @@
 #include "pins.h"
 
 // #define VERBOSE
+// #define SHOW_PROGRESS_ON_LED
 
 #ifdef VERBOSE
 #define LOG printf
@@ -85,6 +86,7 @@ static const unsigned char PLAINTEXT[] = "Hello, World!";
 static uint8_t CYPHERTEXT[CYPHERTEXT_BUF_SIZE];
 static unsigned CYPHERTEXT_LEN = 0;
 
+#ifdef SHOW_PROGRESS_ON_LED
 static void delay(uint32_t cycles)
 {
     unsigned i;
@@ -104,6 +106,7 @@ static void blink(unsigned count, uint32_t duration, unsigned leds)
         delay(duration / 2);
     }
 }
+#endif
 
 void print_bigint(const bigint_t n, unsigned digits)
 {
@@ -548,7 +551,9 @@ int main()
 #endif
 
     printf("RSA app booted\r\n");
+#ifdef SHOW_PROGRESS_ON_LED
     blink(1, SEC_TO_CYCLES * 5, LED1 | LED2);
+#endif
 
     // The constants are specified MSB-to-LSB for legibility
     for (i = 0; i < NUM_DIGITS; i++)
@@ -561,16 +566,22 @@ int main()
     printf("Public key: N = "); print_bigint(pubkey.n, NUM_DIGITS);
     printf(" E = %x\r\n", pubkey.e);
 
+#ifdef SHOW_PROGRESS_ON_LED
     GPIO(PORT_LED_1, OUT) |= BIT(PIN_LED_1);
+#endif
 
     encrypt(CYPHERTEXT, &CYPHERTEXT_LEN, PLAINTEXT, message_length, &pubkey);
 
+#ifdef SHOW_PROGRESS_ON_LED
     GPIO(PORT_LED_1, OUT) &= ~BIT(PIN_LED_1);
+#endif
 
     printf("Cyphertext:\r\n"); print_hex_ascii(CYPHERTEXT, CYPHERTEXT_LEN);
 
     while (1) {
+#ifdef SHOW_PROGRESS_ON_LED
         blink(1, SEC_TO_CYCLES, LED2);
+#endif
     }
 
     return 0;
