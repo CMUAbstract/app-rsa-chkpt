@@ -555,30 +555,31 @@ int main()
     blink(1, SEC_TO_CYCLES * 5, LED1 | LED2);
 #endif
 
-    // The constants are specified MSB-to-LSB for legibility
-    for (i = 0; i < NUM_DIGITS; i++)
-        pubkey.n[i] = N[NUM_DIGITS - i - 1];
-    pubkey.e = E;
-
-    message_length = sizeof(PLAINTEXT);
-
-    printf("Message:\r\n"); print_hex_ascii(PLAINTEXT, message_length);
-    printf("Public key: N = "); print_bigint(pubkey.n, NUM_DIGITS);
-    printf(" E = %x\r\n", pubkey.e);
-
-#ifdef SHOW_PROGRESS_ON_LED
-    GPIO(PORT_LED_1, OUT) |= BIT(PIN_LED_1);
-#endif
-
-    encrypt(CYPHERTEXT, &CYPHERTEXT_LEN, PLAINTEXT, message_length, &pubkey);
-
-#ifdef SHOW_PROGRESS_ON_LED
-    GPIO(PORT_LED_1, OUT) &= ~BIT(PIN_LED_1);
-#endif
-
-    printf("Cyphertext:\r\n"); print_hex_ascii(CYPHERTEXT, CYPHERTEXT_LEN);
-
     while (1) {
+
+        // The constants are specified MSB-to-LSB for legibility
+        for (i = 0; i < NUM_DIGITS; i++)
+            pubkey.n[i] = N[NUM_DIGITS - i - 1];
+        pubkey.e = E;
+
+        message_length = sizeof(PLAINTEXT);
+
+        printf("Message:\r\n"); print_hex_ascii(PLAINTEXT, message_length);
+        printf("Public key: N = "); print_bigint(pubkey.n, NUM_DIGITS);
+        printf(" E = %x\r\n", pubkey.e);
+
+#ifdef SHOW_PROGRESS_ON_LED
+        GPIO(PORT_LED_1, OUT) |= BIT(PIN_LED_1);
+#endif
+
+        encrypt(CYPHERTEXT, &CYPHERTEXT_LEN, PLAINTEXT, message_length, &pubkey);
+
+#ifdef SHOW_PROGRESS_ON_LED
+        GPIO(PORT_LED_1, OUT) &= ~BIT(PIN_LED_1);
+#endif
+
+        printf("Cyphertext:\r\n"); print_hex_ascii(CYPHERTEXT, CYPHERTEXT_LEN);
+
 #ifdef SHOW_PROGRESS_ON_LED
         blink(1, SEC_TO_CYCLES, LED2);
 #endif
