@@ -51,7 +51,7 @@ uint8_t usrBank[USRBANK_SIZE];
 
 #define SEC_TO_CYCLES 4000000 /* 4 MHz */
 
-#define PRINT_HEX_ASCII_COLS 4
+#define PRINT_HEX_ASCII_COLS 8
 
 /** @brief Type large enough to store a product of two digits */
 typedef uint16_t digit_t;
@@ -112,14 +112,14 @@ void print_bigint(const bigint_t n, unsigned digits)
 {
     int i;
     for (i = digits - 1; i >= 0; --i)
-        printf("%x ", n[i]);
+        printf("%02x ", n[i]);
 }
 
 void log_bigint(const bigint_t n, unsigned digits)
 {
     int i;
     for (i = digits - 1; i >= 0; --i)
-        LOG("%x ", n[i]);
+        LOG("%02x ", n[i]);
 }
 
 void print_hex_ascii(const uint8_t *m, unsigned len)
@@ -128,9 +128,9 @@ void print_hex_ascii(const uint8_t *m, unsigned len)
    
     for (i = 0; i < len; i += PRINT_HEX_ASCII_COLS) {
         for (j = 0; j < PRINT_HEX_ASCII_COLS && i + j < len; ++j)
-            printf("%x ", m[i + j]);
+            printf("%02x ", m[i + j]);
         for (; j < PRINT_HEX_ASCII_COLS; ++j)
-            printf("     ");
+            printf("   ");
         printf(" ");
         for (j = 0; j < PRINT_HEX_ASCII_COLS && i + j < len; ++j) {
             char c = m[i + j];
