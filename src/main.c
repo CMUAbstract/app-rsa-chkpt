@@ -159,7 +159,7 @@ void mult(bigint_t a, bigint_t b)
         p = carry;
         c = 0;
         for (i = 0; i < NUM_DIGITS; ++i) {
-            if (digit - i >= 0 && digit - i < NUM_DIGITS) {
+            if (i <= digit && digit - i < NUM_DIGITS) {
                 dp = a[digit - i] * b[i];
 
                 c += dp >> DIGIT_BITS;
