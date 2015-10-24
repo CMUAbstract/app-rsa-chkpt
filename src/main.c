@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include <wisp-base.h>
+#include <msp-builtins.h>
 
 #ifdef CONFIG_LIBEDB_PRINTF
 #include <libedb/edb.h>
@@ -261,12 +262,14 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     if (m_d[2] == n_n) {
         q = (1 << DIGIT_BITS) - 1;
     } else {
-        q = ((m_d[2] << DIGIT_BITS) + m_d[1]) / n_n;
+        // TODO: The long todo described below applies here.
+        //q = ((m_d[2] << DIGIT_BITS) + m_d[1]) / n_n;
+        q = mspbuiltins_div16((m_d[2] << DIGIT_BITS) + m_d[1], n_n);
     }
 
     // Refine quotient guess
 
-    // NOTE: An alternative to composing the digits into one variable, is to
+    // TODO: An alternative to composing the digits into one variable, is to
     // have a loop that does the comparison digit by digit to implement the
     // condition of the while loop below.
     n_q = ((uint32_t)m_d[2] << (2 * DIGIT_BITS)) + (m_d[1] << DIGIT_BITS) + m_d[0];
@@ -280,7 +283,27 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     q++;
     do {
         q--;
-        qn = (uint32_t)n_div * q;
+        // NOTE: yes, this result can be >16-bit because:
+        //   n_n min = 0x80 (by constraint on modulus msb being set)
+        //   => q max = 0xffff / 0x80 = 0x1ff
+        //   n_div max = 0x80ff
+        //   => qn max = 0x80ff * 0x1ff = 0x1017d01
+        //
+        // TODO:
+        //
+        // Approach (1): stick to 16-bit operations, and implement any wider
+        // ops as part of this application, ie. a function operating on digits.
+        //
+        // Approach (2): implement the needed intrinsics in Clang's compiler-rt,
+        // using libgcc's ones for inspiration (watching the calling convention
+        // carefully).
+        //
+        // Approach (3)*: (a lame but quick alternative to Approach (2)) just
+        // write a library that implements these ops in simple C, compile it
+        // with gcc, and link the app against it.
+        //
+        //qn = (uint32_t)n_div * q;
+        qn = mspbuiltins_mult32(n_div, q);
         LOG("reduce: quotient: q=%x qn=%x%x\r\n", q,
               (uint16_t)((qn >> 16) & 0xffff), (uint16_t)(qn & 0xffff));
     } while (qn > n_q);
