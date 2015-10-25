@@ -6,7 +6,6 @@
 #include <stdio.h>
 
 #include <wisp-base.h>
-#include <msp-builtins.h>
 
 #ifdef CONFIG_LIBEDB_PRINTF
 #include <libedb/edb.h>
@@ -296,16 +295,11 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
         // Approach (1): stick to 16-bit operations, and implement any wider
         // ops as part of this application, ie. a function operating on digits.
         //
-        // Approach (2): implement the needed intrinsics in Clang's compiler-rt,
+        // Approach (2)*: implement the needed intrinsics in Clang's compiler-rt,
         // using libgcc's ones for inspiration (watching the calling convention
         // carefully).
         //
-        // Approach (3)*: (a lame but quick alternative to Approach (2)) just
-        // write a library that implements these ops in simple C, compile it
-        // with gcc, and link the app against it.
-        //
-        //qn = (uint32_t)n_div * q;
-        qn = mspbuiltins_mult32(n_div, q);
+        qn = (uint32_t)n_div * q;
         LOG("reduce: quotient: q=%x qn=%x%x\r\n", q,
               (uint16_t)((qn >> 16) & 0xffff), (uint16_t)(qn & 0xffff));
     } while (qn > n_q);
