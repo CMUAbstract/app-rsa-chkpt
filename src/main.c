@@ -544,12 +544,8 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
     *cyphertext_len = out_block_offset;
 }
 
-int main()
+void init()
 {
-    unsigned message_length;
-    int i;
-    pubkey_t pubkey;
-
     WISP_init();
 
 #if defined(CONFIG_LIBEDB_PRINTF)
@@ -573,6 +569,18 @@ int main()
     printf("RSA app booted\r\n");
 #ifdef SHOW_PROGRESS_ON_LED
     blink(1, SEC_TO_CYCLES * 5, LED1 | LED2);
+#endif
+
+}
+
+int main()
+{
+    unsigned message_length;
+    int i;
+    pubkey_t pubkey;
+
+#ifndef MEMENTOS
+    init();
 #endif
 
     while (1) {
