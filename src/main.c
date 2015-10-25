@@ -166,7 +166,7 @@ void mult(bigint_t a, bigint_t b)
                 c += dp >> DIGIT_BITS;
                 p += dp & DIGIT_MASK;
 
-                LOG("mult: i=%u a=%x b=%x p=%x\r\n", i, a[digit - i], b[i], p);
+                LOG("mult: i=%u a=%x b=%x dp=%x p=%x\r\n", i, a[digit - i], b[i], dp, p);
             }
         }
 
@@ -246,6 +246,7 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     digit_t m_d[3]; // [2]=m[d], [1]=m[d-1], [0]=m[d-2]
     digit_t q, n_div, n_n;
     uint32_t n_q, qn;
+    uint16_t m_dividend;
 
     // Divisor, derived from modulus, for refining quotient guess into exact value
     n_div = ((n[NUM_DIGITS - 1] << DIGIT_BITS) + n[NUM_DIGITS - 2]);
@@ -264,7 +265,9 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     } else {
         // TODO: The long todo described below applies here.
         //q = ((m_d[2] << DIGIT_BITS) + m_d[1]) / n_n;
-        q = mspbuiltins_div16((m_d[2] << DIGIT_BITS) + m_d[1], n_n);
+        m_dividend = (m_d[2] << DIGIT_BITS) + m_d[1];
+        q = m_dividend / n_n;
+        LOG("reduce quotient: m_dividend=%x q=%x\r\n", m_dividend, q);
     }
 
     // Refine quotient guess
@@ -274,7 +277,7 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     // condition of the while loop below.
     n_q = ((uint32_t)m_d[2] << (2 * DIGIT_BITS)) + (m_d[1] << DIGIT_BITS) + m_d[0];
 
-    LOG("reduce: quotient: m[d]=%x m[d-1]=%x m[d-2]=%x n_q=%x%x\r\n",
+    LOG("reduce: quotient: m[d]=%x m[d-1]=%x m[d-2]=%x n_q=%02x%02x\r\n",
            m_d[2], m_d[1], m_d[0],
            (uint16_t)((n_q >> 16) & 0xffff), (uint16_t)(n_q & 0xffff));
 
