@@ -264,7 +264,6 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
         q = (1 << DIGIT_BITS) - 1;
     } else {
         // TODO: The long todo described below applies here.
-        //q = ((m_d[2] << DIGIT_BITS) + m_d[1]) / n_n;
         m_dividend = (m_d[2] << DIGIT_BITS) + m_d[1];
         q = m_dividend / n_n;
         LOG("reduce quotient: m_dividend=%x q=%x\r\n", m_dividend, q);
