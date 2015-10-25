@@ -218,11 +218,13 @@ SECTIONS
     KEEP (*(.dtors))
   } > ROM
 
-  .fram_vars (NOLOAD) :
+  .nv_vars :
   {
     . = ALIGN(2);
     PROVIDE (__fram_vars_start = .);
-    *(.fram_vars)
+    *(.ro_nv_vars)
+    *(.nv_vars)
+    *(.fram_vars) /* legacy naming */
     . = ALIGN(2);
     PROVIDE (__fram_vars_end = .);
   } > ROM

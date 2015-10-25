@@ -14,6 +14,10 @@
 
 #include "pins.h"
 
+/* The linker script needs to allocate .fram_vars section into FRAM region. */
+#define __nv    __attribute__((section(".nv_vars")))
+#define __ro_nv __attribute__((section(".ro_nv_vars")))
+
 // #define VERBOSE
 // #define SHOW_PROGRESS_ON_LED
 
@@ -69,7 +73,7 @@ typedef struct {
 // chosen such that block value is less than the modulus. This is accomplished
 // by any value below 0x80, because the modulus is restricted to be above
 // 0x80 (see comments below).
-static const uint8_t PAD_DIGITS[] = { 0x01 };
+static __ro_nv const uint8_t PAD_DIGITS[] = { 0x01 };
 #define NUM_PAD_DIGITS (sizeof(PAD_DIGITS) / sizeof(PAD_DIGITS[0]))
 
 // To generate a key pair:
@@ -77,15 +81,18 @@ static const uint8_t PAD_DIGITS[] = { 0x01 };
 // $ openssl rsa -out keys.txt -text -in private.pem
 // Note: genrsa is superceded by genpkey, but the latter supports only >256-bit
 
-static const bigint_t N = { 0xaa, 0x49, 0x6a, 0x45}; // modulus (see note below)
-static const digit_t E = 0x3; // public exponent
+static __ro_nv const pubkey_t pubkey = {
+    .n = { 0x45, 0x6a, 0x49, 0xaa }, // byte order: LSB to MSB, constraint MSB>=0x80
+    .e = 0x3,
+};
 // private exponent for the above: 0x71853073
 
-static const unsigned char PLAINTEXT[] = "Hello, World!";
+//static __ro_nv const unsigned char PLAINTEXT[] = "Hello, World!";
+static __ro_nv const unsigned char PLAINTEXT[] = "Hello, World!";
 
 #define CYPHERTEXT_BUF_SIZE 32
-static uint8_t CYPHERTEXT[CYPHERTEXT_BUF_SIZE];
-static unsigned CYPHERTEXT_LEN = 0;
+static __nv uint8_t CYPHERTEXT[CYPHERTEXT_BUF_SIZE] = {0};
+static __nv unsigned CYPHERTEXT_LEN = 0;
 
 #ifdef SHOW_PROGRESS_ON_LED
 static void delay(uint32_t cycles)
@@ -145,11 +152,13 @@ void print_hex_ascii(const uint8_t *m, unsigned len)
 
 void mult(bigint_t a, bigint_t b)
 {
+    // Store in NV memory to reduce RAM footprint (might not even fit in RAM)
+    static __nv bigint_t product;
+
     int i;
     unsigned digit;
     digit_t p, c, dp;
     digit_t carry = 0;
-    bigint_t product;
 
     LOG("mult: a = "); log_bigint(a, NUM_DIGITS); LOG("\r\n");
     LOG("mult: b = "); log_bigint(b, NUM_DIGITS); LOG("\r\n");
@@ -510,10 +519,14 @@ void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
 }
 
 void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
-             const uint8_t *message, unsigned message_length, pubkey_t *k)
+             const uint8_t *message, unsigned message_length,
+             const pubkey_t *k)
 {
+    // Store in NV memory to reduce RAM footprint (might not even fit in RAM)
+    static __nv bigint_t in_block;
+    static __nv bigint_t out_block;
+
     int i;
-    bigint_t in_block, out_block;
     unsigned in_block_offset, out_block_offset;
 
     in_block_offset = 0;
@@ -576,19 +589,12 @@ void init()
 int main()
 {
     unsigned message_length;
-    int i;
-    pubkey_t pubkey;
 
 #ifndef MEMENTOS
     init();
 #endif
 
     while (1) {
-
-        // The constants are specified MSB-to-LSB for legibility
-        for (i = 0; i < NUM_DIGITS; i++)
-            pubkey.n[i] = N[NUM_DIGITS - i - 1];
-        pubkey.e = E;
 
         message_length = sizeof(PLAINTEXT);
 
