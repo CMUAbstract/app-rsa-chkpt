@@ -528,8 +528,8 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
         for (i = 0; i < NUM_DIGITS - NUM_PAD_DIGITS; ++i)
             in_block[i] = (in_block_offset + i < message_length) ?
                                 message[in_block_offset + i] : 0x00;
-        for (i = NUM_DIGITS - NUM_PAD_DIGITS; i < NUM_DIGITS; ++i)
-            in_block[i] = PAD_DIGITS[i];
+        for (i = 0; i < NUM_PAD_DIGITS; ++i)
+            in_block[NUM_DIGITS - NUM_PAD_DIGITS + i] = PAD_DIGITS[i];
 
         LOG("in block: "); log_bigint(in_block, NUM_DIGITS); LOG("\r\n");
         mod_exp(out_block, in_block, k->e, k->n);
