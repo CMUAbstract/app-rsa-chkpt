@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include <wisp-base.h>
+#include <msp-math.h>
 
 #ifdef CONFIG_LIBEDB_PRINTF
 #include <libedb/edb.h>
@@ -299,7 +300,7 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
         // using libgcc's ones for inspiration (watching the calling convention
         // carefully).
         //
-        qn = (uint32_t)n_div * q;
+        qn = mult16(n_div, q);
         LOG("reduce: quotient: q=%x n_div=%x qn=%02x%02x\r\n", q, n_div,
               (uint16_t)((qn >> 16) & 0xffff), (uint16_t)(qn & 0xffff));
     } while (qn > n_q);

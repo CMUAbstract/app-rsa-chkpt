@@ -35,12 +35,15 @@ LFLAGS += -L$(LIBMSPCONSOLE_ROOT)/bld/gcc
 endif
 
 CFLAGS += \
-	-I$(WISP_BASE_ROOT)
+	-I$(WISP_BASE_ROOT) \
+	-I$(LIBMSPMATH_ROOT)/src/include \
 
 LFLAGS += \
 	-L$(WISP_BASE_ROOT)/gcc \
+	-L$(LIBMSPMATH_ROOT)/bld/gcc \
 
 LIBS += \
     -lwisp-base \
+	-lmspmath \
 
 VPATH = ../../src
