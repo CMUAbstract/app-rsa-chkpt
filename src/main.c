@@ -8,7 +8,7 @@
 #include <wisp-base.h>
 #include <msp-math.h>
 
-#ifdef CONFIG_LIBEDB_PRINTF
+#ifdef CONFIG_EDB
 #include <libedb/edb.h>
 #endif
 
@@ -31,12 +31,14 @@
 #define PORT_LED_OUT P1OUT
 #define PIN_LED      1
 
-#ifdef CONFIG_LIBEDB_PRINTF
+#if defined(CONFIG_LIBEDB_PRINTF_EIF)
+#define printf(...) PRINTF(__VA_ARGS__)
+#elif defined(CONFIG_LIBEDB_PRINTF_BARE)
 #define printf(...) BARE_PRINTF(__VA_ARGS__)
-#else // CONFIG_LIBEDB_PRINTF
-#ifndef CONFIG_LIBMSPCONSOLE_PRINTF
+#elif defined(CONFIG_LIBMSPCONSOLE_PRINTF)
+// nothing to to do
+#else
 #define printf(...)
-#endif // CONFIG_LIBMSPCONSOLE_PRINTF
 #endif
 
 
@@ -561,7 +563,11 @@ void init()
 {
     WISP_init();
 
-#if defined(CONFIG_LIBEDB_PRINTF)
+#ifdef CONFIG_EDB
+    debug_setup();
+#endif
+
+#if defined(CONFIG_LIBEDB_PRINTF_BARE)
     BARE_PRINTF_ENABLE();
 #elif defined(CONFIG_LIBMSPCONSOLE_PRINTF)
     UART_init();

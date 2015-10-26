@@ -3,15 +3,12 @@ EXEC = rsa.out
 OBJECTS = \
 	main.o \
 
-LIBCHAIN_ENABLE_DIAGNOSTICS ?= 0
-CONFIG_PRINTF_LIB ?= libedb
 BOARD ?= wisp
+CONFIG_EDB ?= 1
+CONFIG_PRINTF_LIB ?= libedb
+CONFIG_LIBEDB_PRINTF ?= eif
 
 include $(MAKER_ROOT)/Makefile.gcc
-
-ifeq ($(LIBCHAIN_ENABLE_DIAGNOSTICS),1)
-CFLAGS += -DLIBCHAIN_ENABLE_DIAGNOSTICS
-endif
 
 ifeq ($(BOARD),wisp)
 CFLAGS += -DBOARD_WISP
@@ -21,17 +18,25 @@ ifeq ($(BOARD),mspts430)
 CFLAGS += -DBOARD_MSP_TS430
 endif
 
-ifeq ($(CONFIG_PRINTF_LIB),libedb)
-CFLAGS += -DCONFIG_LIBEDB_PRINTF
-LIBS += -ledb
-LFLAGS += -L$(LIBEDB_ROOT)/gcc
+ifeq ($(CONFIG_EDB),1)
+CFLAGS += -DCONFIG_EDB
 CFLAGS += -I$(LIBEDB_ROOT)/src/include
+LFLAGS += -L$(LIBEDB_ROOT)/gcc
+LIBS += -ledb
 endif
 
-ifeq ($(CONFIG_PRINTF_LIB),libmspconsole)
+ifeq ($(CONFIG_PRINTF_LIB),libedb)
+
+ifeq ($(CONFIG_LIBEDB_PRINTF),eif)
+CFLAGS += -DCONFIG_LIBEDB_PRINTF_EIF
+else ifeq ($(CONFIG_LIBEDB_PRINTF),bare)
+CFLAGS += -DCONFIG_LIBEDB_PRINTF_BARE
+endif # CONFIG_LIBEDB_PRINTF
+
+else ifeq ($(CONFIG_PRINTF_LIB),libmspconsole)
 CFLAGS += -DCONFIG_LIBMSPCONSOLE_PRINTF
-LIBS += -lmspconsole
 LFLAGS += -L$(LIBMSPCONSOLE_ROOT)/bld/gcc
+LIBS += -lmspconsole
 endif
 
 CFLAGS += \
