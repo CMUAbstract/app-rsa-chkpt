@@ -602,8 +602,8 @@ int main()
         message_length = sizeof(PLAINTEXT) - 1; // exclude null byte
 
         printf("Message:\r\n"); print_hex_ascii(PLAINTEXT, message_length);
-        printf("Public key: N = "); print_bigint(pubkey.n, NUM_DIGITS);
-        printf(" E = %x\r\n", pubkey.e);
+        printf("Public key: exp = %x modulus =\r\n", pubkey.e);
+        print_hex_ascii((uint8_t*)pubkey.n, NUM_DIGITS * 2); // TODO: bigint bytes
 
 #ifdef SHOW_PROGRESS_ON_LED
         GPIO(PORT_LED_1, OUT) |= BIT(PIN_LED_1);
