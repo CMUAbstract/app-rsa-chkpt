@@ -38,13 +38,14 @@
 #define printf(...)
 #endif
 
-
 // For wisp-base
 uint8_t usrBank[USRBANK_SIZE];
 
-#define NUM_DIGITS       4 // 4 * 8 = 32-bit blocks
+#include "../data/keysize.h"
+
 #define DIGIT_BITS       8 // arithmetic ops take 8-bit args produce 16-bit result
 #define DIGIT_MASK       0x00ff
+#define NUM_DIGITS       (KEY_SIZE_BITS / DIGIT_BITS)
 
 #if NUM_DIGITS < 2
 #error The modular reduction implementation requires at least 2 digits
@@ -75,19 +76,16 @@ typedef struct {
 static __ro_nv const uint8_t PAD_DIGITS[] = { 0x01 };
 #define NUM_PAD_DIGITS (sizeof(PAD_DIGITS) / sizeof(PAD_DIGITS[0]))
 
-// To generate a key pair:
-// $ openssl genrsa -out private.pem -3 32
-// $ openssl rsa -out keys.txt -text -in private.pem
-// Note: genrsa is superceded by genpkey, but the latter supports only >256-bit
+// To generate a key pair: see scripts/
 
+// modulus: byte order: LSB to MSB, constraint MSB>=0x80
 static __ro_nv const pubkey_t pubkey = {
-    .n = { 0x45, 0x6a, 0x49, 0xaa }, // byte order: LSB to MSB, constraint MSB>=0x80
-    .e = 0x3,
+#include "../data/key.txt"
 };
-// private exponent for the above: 0x71853073
 
-//static __ro_nv const unsigned char PLAINTEXT[] = "Hello, World!";
-static __ro_nv const unsigned char PLAINTEXT[] = "Hello, World!";
+static __ro_nv const unsigned char PLAINTEXT[] =
+#include "../data/plaintext.txt"
+;
 
 #define NUM_PLAINTEXT_BLOCKS (sizeof(PLAINTEXT) / NUM_DIGITS + 1)
 #define CYPHERTEXT_BUF_SIZE (sizeof(PLAINTEXT) + NUM_PLAINTEXT_BLOCKS * NUM_PAD_DIGITS)
