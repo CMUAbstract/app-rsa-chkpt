@@ -8,6 +8,9 @@ CONFIG_EDB ?= 1
 CONFIG_PRINTF_LIB ?= libedb
 CONFIG_LIBEDB_PRINTF ?= eif
 
+MEMENTOS_MODE ?= latch
+MEMENTOS_IGNORE_GLOBALS ?= 1
+
 include $(MAKER_ROOT)/Makefile.mementos
 
 ifeq ($(BOARD),wisp)
