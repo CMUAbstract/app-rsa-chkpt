@@ -40,6 +40,7 @@ endif
 
 CFLAGS += \
 	-I$(WISP_BASE_ROOT) \
+	-I$(LIBMSP_ROOT)/src/include \
 	-I$(LIBMSPMATH_ROOT)/src/include \
 
 LLVM_NOOPT_LIBS += \

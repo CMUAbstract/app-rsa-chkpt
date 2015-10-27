@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include <libmsp/mem.h>
 #include <wisp-base.h>
 #include <msp-math.h>
 
@@ -13,10 +14,6 @@
 #endif
 
 #include "pins.h"
-
-/* The linker script needs to allocate .fram_vars section into FRAM region. */
-#define __nv    __attribute__((section(".nv_vars")))
-#define __ro_nv __attribute__((section(".ro_nv_vars")))
 
 // #define VERBOSE
 // #define SHOW_PROGRESS_ON_LED
