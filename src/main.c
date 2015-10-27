@@ -89,7 +89,8 @@ static __ro_nv const pubkey_t pubkey = {
 //static __ro_nv const unsigned char PLAINTEXT[] = "Hello, World!";
 static __ro_nv const unsigned char PLAINTEXT[] = "Hello, World!";
 
-#define CYPHERTEXT_BUF_SIZE 32
+#define NUM_PLAINTEXT_BLOCKS (sizeof(PLAINTEXT) / NUM_DIGITS + 1)
+#define CYPHERTEXT_BUF_SIZE (sizeof(PLAINTEXT) + NUM_PLAINTEXT_BLOCKS * NUM_PAD_DIGITS)
 static __nv uint8_t CYPHERTEXT[CYPHERTEXT_BUF_SIZE] = {0};
 static __nv unsigned CYPHERTEXT_LEN = 0;
 
