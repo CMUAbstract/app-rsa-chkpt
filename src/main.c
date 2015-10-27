@@ -533,7 +533,7 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
     while (in_block_offset < message_length) {
         for (i = 0; i < NUM_DIGITS - NUM_PAD_DIGITS; ++i)
             in_block[i] = (in_block_offset + i < message_length) ?
-                                message[in_block_offset + i] : 0x00;
+                                message[in_block_offset + i] : 0xFF;
         for (i = 0; i < NUM_PAD_DIGITS; ++i)
             in_block[NUM_DIGITS - NUM_PAD_DIGITS + i] = PAD_DIGITS[i];
 
