@@ -599,7 +599,7 @@ int main()
 
     while (1) {
 
-        message_length = sizeof(PLAINTEXT);
+        message_length = sizeof(PLAINTEXT) - 1; // exclude null byte
 
         printf("Message:\r\n"); print_hex_ascii(PLAINTEXT, message_length);
         printf("Public key: N = "); print_bigint(pubkey.n, NUM_DIGITS);
