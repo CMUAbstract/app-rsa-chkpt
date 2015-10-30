@@ -18,6 +18,7 @@ include $(MAKER_ROOT)/Makefile.edb
 CFLAGS += \
 	-I$(LIBMSP_ROOT)/src/include \
 	-I$(LIBMSPMATH_ROOT)/src/include \
+	-I$(LIBMSPBUILTINS_ROOT)/src/include \
 
 LLVM_NOOPT_LIBS += \
 	$(LIBMSPMATH_ROOT)/bld/clang/libmspmath.a.bc \
