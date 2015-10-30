@@ -32,6 +32,10 @@
 #define PORT_LED_OUT P1OUT
 #define PIN_LED      1
 
+#if !defined(CONFIG_LIBEDB_PRINTF_EIF) && !defined(CONFIG_LIBEDB_PRINTF_BARE)
+#define PRINTF(...) printf(__VA_ARGS__)
+#endif
+
 #if defined(CONFIG_LIBEDB_PRINTF_EIF)
 #define printf(...) PRINTF(__VA_ARGS__)
 #elif defined(CONFIG_LIBEDB_PRINTF_BARE)
@@ -535,6 +539,9 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
     in_block_offset = 0;
     out_block_offset = 0;
     while (in_block_offset < message_length) {
+
+        PRINTF("Blk offset: %u\r\n", in_block_offset);
+
         for (i = 0; i < NUM_DIGITS - NUM_PAD_DIGITS; ++i)
             in_block[i] = (in_block_offset + i < message_length) ?
                                 message[in_block_offset + i] : 0xFF;
@@ -586,11 +593,11 @@ void init()
     GPIO(PORT_LED_3, OUT) |= BIT(PIN_LED_3);
 #endif
 
-    printf("RSA app booted\r\n");
 #ifdef SHOW_PROGRESS_ON_LED
     blink(1, SEC_TO_CYCLES * 5, LED1 | LED2);
 #endif
 
+    PRINTF(".\r\n");
 }
 
 int main()
