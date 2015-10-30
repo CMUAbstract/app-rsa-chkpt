@@ -605,9 +605,11 @@ int main()
 
         message_length = sizeof(PLAINTEXT) - 1; // exclude null byte
 
+        ENERGY_GUARD_BEGIN();
         printf("Message:\r\n"); print_hex_ascii(PLAINTEXT, message_length);
         printf("Public key: exp = %x modulus =\r\n", pubkey.e);
         print_hex_ascii((uint8_t*)pubkey.n, NUM_DIGITS * 2); // TODO: bigint bytes
+        ENERGY_GUARD_END();
 
 #ifdef SHOW_PROGRESS_ON_LED
         GPIO(PORT_LED_1, OUT) |= BIT(PIN_LED_1);
@@ -619,7 +621,11 @@ int main()
         GPIO(PORT_LED_1, OUT) &= ~BIT(PIN_LED_1);
 #endif
 
-        printf("Cyphertext:\r\n"); print_hex_ascii(CYPHERTEXT, CYPHERTEXT_LEN);
+
+        ENERGY_GUARD_BEGIN();
+        printf("Cyphertext:\r\n");
+        print_hex_ascii(CYPHERTEXT, CYPHERTEXT_LEN);
+        ENERGY_GUARD_END();
 
 #ifdef SHOW_PROGRESS_ON_LED
         blink(1, SEC_TO_CYCLES, LED2);
