@@ -101,7 +101,7 @@ static void delay(uint32_t cycles)
 {
     unsigned i;
     for (i = 0; i < cycles / (1U << 15); ++i)
-        __delay_cycles(1U << 15);
+        __delay_cycles((1U << 15));
 }
 
 static void blink(unsigned count, uint32_t duration, unsigned leds)
