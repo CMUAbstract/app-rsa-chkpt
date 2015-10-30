@@ -12,6 +12,9 @@
 
 #ifdef CONFIG_EDB
 #include <libedb/edb.h>
+#else
+#define ENERGY_GUARD_BEGIN()
+#define ENERGY_GUARD_END()
 #endif
 
 #include "pins.h"
