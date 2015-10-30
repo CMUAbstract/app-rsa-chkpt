@@ -8,6 +8,7 @@
 #include <libmsp/mem.h>
 #include <wisp-base.h>
 #include <msp-math.h>
+#include <msp-builtins.h>
 
 #ifdef CONFIG_EDB
 #include <libedb/edb.h>
