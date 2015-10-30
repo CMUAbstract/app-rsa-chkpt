@@ -91,9 +91,10 @@ static __ro_nv const unsigned char PLAINTEXT[] =
 #include "../data/plaintext.txt"
 ;
 
-#define NUM_PLAINTEXT_BLOCKS (sizeof(PLAINTEXT) / NUM_DIGITS + 1)
-#define CYPHERTEXT_BUF_SIZE (sizeof(PLAINTEXT) + NUM_PLAINTEXT_BLOCKS * NUM_PAD_DIGITS)
-static __nv uint8_t CYPHERTEXT[CYPHERTEXT_BUF_SIZE] = {0};
+#define NUM_PLAINTEXT_BLOCKS (sizeof(PLAINTEXT) / (NUM_DIGITS - NUM_PAD_DIGITS) + 1)
+#define CYPHERTEXT_SIZE (NUM_PLAINTEXT_BLOCKS * NUM_DIGITS)
+
+static __nv uint8_t CYPHERTEXT[CYPHERTEXT_SIZE] = {0};
 static __nv unsigned CYPHERTEXT_LEN = 0;
 
 #ifdef SHOW_PROGRESS_ON_LED
