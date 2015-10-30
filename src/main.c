@@ -117,7 +117,7 @@ DINO_RECOVERY_ROUTINE_LIST_END()
 #else // !DINO
 
 #define DINO_RESTORE_CHECK()
-#define DINO_TASK_BOUNDARY(...)
+#define DINO_TASK_BOUNDARY_WITH_VERSIONS(...)
 
 #endif // !DINO
 
@@ -239,7 +239,7 @@ void mult(bigint_t a, bigint_t b)
     digit_t p, c, dp;
     digit_t carry = 0;
 
-    DINO_TASK_BOUNDARY(MULT_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(MULT_TASK, NULL);
 
     LOG("mult: a = "); log_bigint(a, NUM_DIGITS); LOG("\r\n");
     LOG("mult: b = "); log_bigint(b, NUM_DIGITS); LOG("\r\n");
@@ -280,7 +280,7 @@ bool reduce_normalizable(bigint_t m, const bigint_t n, unsigned d)
     digit_t n_d, m_d;
     bool normalizable = true;
 
-    DINO_TASK_BOUNDARY(REDUCE_NORMALIZABLE_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_NORMALIZABLE_TASK, NULL);
 
     offset = d + 1 - NUM_DIGITS; // TODO: can this go below zero
     LOG("reduce: normalizable: d=%u offset=%u\r\n", d, offset);
@@ -310,7 +310,7 @@ void reduce_normalize(bigint_t m, const bigint_t n, unsigned digit)
     digit_t d, s, m_d, n_d;
     unsigned borrow, offset;
 
-    DINO_TASK_BOUNDARY(REDUCE_NORMALIZE_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_NORMALIZE_TASK, NULL);
 
     offset = digit + 1 - NUM_DIGITS; // TODO: can this go below zero
 
@@ -342,7 +342,7 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     uint32_t n_q, qn;
     uint16_t m_dividend;
 
-    DINO_TASK_BOUNDARY(REDUCE_QUOTIENT_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_QUOTIENT_TASK, NULL);
 
     // Divisor, derived from modulus, for refining quotient guess into exact value
     n_div = ((n[NUM_DIGITS - 1] << DIGIT_BITS) + n[NUM_DIGITS - 2]);
@@ -414,7 +414,7 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
     unsigned offset, c;
     digit_t p, nd;
 
-    DINO_TASK_BOUNDARY(REDUCE_MULTIPLY_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_MULTIPLY_TASK, NULL);
 
     // TODO: factor out shift outside of this task
     // As part of this task, we also perform the left-shifting of the q*m
@@ -460,7 +460,7 @@ int reduce_compare(bigint_t a, bigint_t b)
     int i;
     int relation = 0;
 
-    DINO_TASK_BOUNDARY(REDUCE_COMPARE_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_COMPARE_TASK, NULL);
 
     for (i = NUM_DIGITS * 2 - 1; i >= 0; --i) {
         if (a > b) {
@@ -481,7 +481,7 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
     unsigned offset, c;
     digit_t r, m, n;
 
-    DINO_TASK_BOUNDARY(REDUCE_ADD_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_ADD_TASK, NULL);
 
     // TODO: factor out shift outside of this task
     // Part of this task is to shift modulus by radix^(digit - NUM_DIGITS)
@@ -521,7 +521,7 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
     digit_t m, s, r, qn;
     unsigned borrow, offset;
 
-    DINO_TASK_BOUNDARY(REDUCE_SUBTRACT_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_SUBTRACT_TASK, NULL);
 
     // TODO: factor out shifting logic from this task
     // The qn product had been shifted by this offset, no need to subtract the zeros
@@ -559,7 +559,7 @@ void reduce(bigint_t m, const bigint_t n)
     bigint_t qn;
     unsigned d;
 
-    DINO_TASK_BOUNDARY(REDUCE_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_TASK, NULL);
 
     // Start reduction loop at most significant non-zero digit
     d = 2 * NUM_DIGITS;
@@ -600,7 +600,7 @@ void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
 {
     int i;
 
-    DINO_TASK_BOUNDARY(MOD_EXP_TASK, NULL);
+    DINO_TASK_BOUNDARY_WITH_VERSIONS(MOD_EXP_TASK, NULL);
 
     // Result initialized to 1
     out_block[0] = 0x1;
@@ -632,7 +632,7 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
     out_block_offset = 0;
     while (in_block_offset < message_length) {
 
-        DINO_TASK_BOUNDARY(ENCRYPT_TASK, NULL);
+        DINO_TASK_BOUNDARY_WITH_VERSIONS(ENCRYPT_TASK, NULL);
 
         PRINTF("Blk offset: %u\r\n", in_block_offset);
 
@@ -705,7 +705,7 @@ int main()
     DINO_RESTORE_CHECK();
 
     while (1) {
-        DINO_TASK_BOUNDARY(PRINT_PLAINTEXT_TASK, NULL);
+        DINO_TASK_BOUNDARY_WITH_VERSIONS(PRINT_PLAINTEXT_TASK, NULL);
 
         message_length = sizeof(PLAINTEXT) - 1; // exclude null byte
 
@@ -725,7 +725,7 @@ int main()
         GPIO(PORT_LED_1, OUT) &= ~BIT(PIN_LED_1);
 #endif
 
-        DINO_TASK_BOUNDARY(PRINT_CYPHERTEXT_TASK, NULL);
+        DINO_TASK_BOUNDARY_WITH_VERSIONS(PRINT_CYPHERTEXT_TASK, NULL);
 
         ENERGY_GUARD_BEGIN();
         printf("Cyphertext:\r\n");
