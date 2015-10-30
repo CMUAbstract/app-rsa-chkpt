@@ -3,10 +3,10 @@ EXEC = rsa.out
 OBJECTS = \
 	main.o \
 
-BOARD ?= mspts430
-CONFIG_EDB ?= 0
-CONFIG_PRINTF_LIB ?= libmspconsole
-#CONFIG_LIBEDB_PRINTF ?= eif
+BOARD ?= wisp
+CONFIG_EDB ?= 1
+CONFIG_PRINTF_LIB ?= libedb
+CONFIG_LIBEDB_PRINTF ?= bare
 
 include $(MAKER_ROOT)/Makefile.dino
 include $(MAKER_ROOT)/Makefile.board

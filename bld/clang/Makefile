@@ -6,7 +6,7 @@ OBJECTS = \
 BOARD ?= wisp
 CONFIG_EDB ?= 1
 CONFIG_PRINTF_LIB ?= libedb
-CONFIG_LIBEDB_PRINTF ?= eif
+CONFIG_LIBEDB_PRINTF ?= bare
 
 include $(MAKER_ROOT)/Makefile.clang
 include $(MAKER_ROOT)/Makefile.board
