@@ -89,6 +89,7 @@ uint8_t usrBank[USRBANK_SIZE];
 #define REDUCE_ADD_LOOP_TASK           22
 #define REDUCE_SUBTRACT_LOOP_TASK      23
 #define REDUCE_MULTIPLY_LOOP_TASK      24
+#define DONE_TASK                      99
 
 #define ENCRYPT_DONE_TASK                   25
 #define MOD_EXP_DONE_TASK                   26
@@ -832,7 +833,7 @@ int main()
 
     DINO_RESTORE_CHECK();
 
-    while (1) {
+    do {
         TASK_BOUNDARY(PRINT_PLAINTEXT_TASK, NULL);
         DINO_RESTORE_NONE();
 
@@ -865,7 +866,12 @@ int main()
 #ifdef SHOW_PROGRESS_ON_LED
         blink(1, SEC_TO_CYCLES, LED2);
 #endif
-    }
+    } while (0);
+
+    TASK_BOUNDARY(DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
+
+    while (1);
 
     return 0;
 }
