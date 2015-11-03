@@ -20,6 +20,7 @@ CFLAGS += \
 
 LLVM_LIBS += \
 	$(LIBMSPMATH_ROOT)/bld/clang/libmspmath.a.bc \
+	$(LIBMSP_ROOT)/bld/clang/libmsp.a.bc \
 
 LFLAGS+= \
 	-L$(LIBMSPBUILTINS_ROOT)/bld/gcc \
