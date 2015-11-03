@@ -24,7 +24,7 @@
 
 #include "pins.h"
 
-#define VERBOSE
+// #define VERBOSE
 // #define VERBOSE2
 // #define SHOW_PROGRESS_ON_LED
 // #define BLOCK_DELAY
