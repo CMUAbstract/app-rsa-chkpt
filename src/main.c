@@ -302,7 +302,7 @@ void mult(bigint_t a, bigint_t b)
     LOG("mult: b = "); log_bigint(b, NUM_DIGITS); LOG("\r\n");
 
     for (digit = 0; digit < NUM_DIGITS * 2; ++digit) {
-        LOG("mult: d=%u\r\n", digit);
+        LOG2("mult: d=%u\r\n", digit);
 
         TASK_BOUNDARY(MULT_DIGIT_LOOP_TASK, NULL);
         DINO_RESTORE_NONE();
