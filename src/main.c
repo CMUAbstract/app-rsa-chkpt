@@ -78,7 +78,32 @@ uint8_t usrBank[USRBANK_SIZE];
 #define REDUCE_ADD_TASK                10
 #define REDUCE_SUBTRACT_TASK           11
 #define PRINT_CYPHERTEXT_TASK          12
+#define MOD_EXP_LOOP_TASK              13
+#define MULT_DIGIT_LOOP_TASK           14
+#define REDUCE_QUOTIENT_1_TASK         16
+#define REDUCE_QUOTIENT_2_TASK         17
+#define REDUCE_QUOTIENT_3_TASK         18
+#define REDUCE_QUOTIENT_4_TASK         19
+#define MULT_COPY_TASK                 20
+#define REDUCE_NORMALIZE_LOOP_TASK     21
+#define REDUCE_ADD_LOOP_TASK           22
+#define REDUCE_SUBTRACT_LOOP_TASK      23
+#define REDUCE_MULTIPLY_LOOP_TASK      24
 
+#define ENCRYPT_DONE_TASK                   25
+#define MOD_EXP_DONE_TASK                   26
+#define MULT_DONE_TASK                      27
+#define REDUCE_DONE_TASK                    28
+#define REDUCE_NORMALIZE_DONE_TASK          29
+#define REDUCE_NORMALIZABLE_DONE_TASK       30
+#define REDUCE_COMPARE_DONE_TASK            31
+#define REDUCE_QUOTIENT_DONE_TASK           32
+#define REDUCE_MULTIPLY_DONE_TASK           33
+#define REDUCE_ADD_DONE_TASK                34
+#define REDUCE_SUBTRACT_DONE_TASK           35
+
+#if 0 // TODO: this is only for DINO with compiler support
+      // NOTE: this code is not up to date
 DINO_RECOVERY_ROUTINE_LIST_BEGIN()
 
   DINO_RECOVERY_RTN_BEGIN(PRINT_PLAINTEXT_TASK)
@@ -121,11 +146,28 @@ DINO_RECOVERY_ROUTINE_LIST_BEGIN()
   DINO_RECOVERY_RTN_END()
 
 DINO_RECOVERY_ROUTINE_LIST_END()
+#endif
+
+#define TASK_BOUNDARY(t, x) \
+        DINO_TASK_BOUNDARY(t, x); \
+        curtask = t; \
+
+#define DINO_RESTORE_NONE() \
+        DINO_REVERT_BEGIN() \
+        DINO_REVERT_END() \
+
+#define DINO_RESTORE_PTR(nm, type) \
+        DINO_REVERT_BEGIN() \
+        DINO_REVERT_PTR(type, nm); \
+        DINO_REVERT_END() \
 
 #else // !DINO
 
 #define DINO_RESTORE_CHECK()
-#define DINO_TASK_BOUNDARY_WITH_VERSIONS(...)
+#define TASK_BOUNDARY(...)
+#define DINO_VERSION_PTR(...)
+#define DINO_RESTORE_NONE()
+#define DINO_RESTORE_PTR(...)
 
 #endif // !DINO
 
@@ -180,6 +222,14 @@ static __ro_nv const unsigned char PLAINTEXT[] =
 
 static __nv uint8_t CYPHERTEXT[CYPHERTEXT_SIZE] = {0};
 static __nv unsigned CYPHERTEXT_LEN = 0;
+
+// Store in NV memory to reduce RAM footprint (might not even fit in RAM)
+static __nv bigint_t in_block;
+static __nv bigint_t out_block;
+static __nv bigint_t qxn;
+static __nv bigint_t product;
+
+static __nv unsigned curtask;
 
 #ifdef SHOW_PROGRESS_ON_LED
 static void delay(uint32_t cycles)
@@ -239,21 +289,23 @@ void print_hex_ascii(const uint8_t *m, unsigned len)
 
 void mult(bigint_t a, bigint_t b)
 {
-    // Store in NV memory to reduce RAM footprint (might not even fit in RAM)
-    static __nv bigint_t product;
-
     int i;
     unsigned digit;
     digit_t p, c, dp;
     digit_t carry = 0;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(MULT_TASK, NULL);
+
+    TASK_BOUNDARY(MULT_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     LOG("mult: a = "); log_bigint(a, NUM_DIGITS); LOG("\r\n");
     LOG("mult: b = "); log_bigint(b, NUM_DIGITS); LOG("\r\n");
 
     for (digit = 0; digit < NUM_DIGITS * 2; ++digit) {
         LOG("mult: d=%u\r\n", digit);
+
+        TASK_BOUNDARY(MULT_DIGIT_LOOP_TASK, NULL);
+        DINO_RESTORE_NONE();
 
         p = carry;
         c = 0;
@@ -275,10 +327,16 @@ void mult(bigint_t a, bigint_t b)
         carry = c;
     }
 
+    TASK_BOUNDARY(MULT_COPY_TASK, NULL);
+    DINO_RESTORE_NONE();
+
     LOG("mult: product = "); log_bigint(product, 2 * NUM_DIGITS); LOG("\r\n");
 
     for (i = 0; i < 2 * NUM_DIGITS; ++i)
         a[i] = product[i];
+
+    TASK_BOUNDARY(MULT_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
 }
 
 bool reduce_normalizable(bigint_t m, const bigint_t n, unsigned d)
@@ -288,7 +346,8 @@ bool reduce_normalizable(bigint_t m, const bigint_t n, unsigned d)
     digit_t n_d, m_d;
     bool normalizable = true;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_NORMALIZABLE_TASK, NULL);
+    TASK_BOUNDARY(REDUCE_NORMALIZABLE_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     offset = d + 1 - NUM_DIGITS; // TODO: can this go below zero
     LOG("reduce: normalizable: d=%u offset=%u\r\n", d, offset);
@@ -309,6 +368,9 @@ bool reduce_normalizable(bigint_t m, const bigint_t n, unsigned d)
 
     LOG("normalizable: %u\r\n", normalizable);
 
+    TASK_BOUNDARY(REDUCE_NORMALIZABLE_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
+
     return normalizable;
 }
 
@@ -318,12 +380,19 @@ void reduce_normalize(bigint_t m, const bigint_t n, unsigned digit)
     digit_t d, s, m_d, n_d;
     unsigned borrow, offset;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_NORMALIZE_TASK, NULL);
+    DINO_VERSION_PTR(m, bigint_t);
+    TASK_BOUNDARY(REDUCE_NORMALIZE_TASK, NULL);
+    DINO_RESTORE_PTR(m, bigint_t);
 
     offset = digit + 1 - NUM_DIGITS; // TODO: can this go below zero
 
     borrow = 0;
     for (i = 0; i < NUM_DIGITS; ++i) {
+
+        DINO_VERSION_PTR(m, bigint_t);
+        TASK_BOUNDARY(REDUCE_NORMALIZE_LOOP_TASK, NULL);
+        DINO_RESTORE_PTR(m, bigint_t);
+
         m_d = m[i + offset];
         n_d = n[i];
 
@@ -341,6 +410,9 @@ void reduce_normalize(bigint_t m, const bigint_t n, unsigned digit)
 
         m[i + offset] = d;
     }
+
+    TASK_BOUNDARY(REDUCE_NORMALIZE_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
 }
 
 void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d)
@@ -350,7 +422,8 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     uint32_t n_q, qn;
     uint16_t m_dividend;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_QUOTIENT_TASK, NULL);
+    TASK_BOUNDARY(REDUCE_QUOTIENT_1_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     // Divisor, derived from modulus, for refining quotient guess into exact value
     n_div = ((n[NUM_DIGITS - 1] << DIGIT_BITS) + n[NUM_DIGITS - 2]);
@@ -363,6 +436,9 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
 
     LOG("reduce: quotient: n_n=%x m[d]=%x\r\n", n_n, m[2]);
 
+    TASK_BOUNDARY(REDUCE_QUOTIENT_2_TASK, NULL);
+    DINO_RESTORE_NONE();
+
     // Choose an initial guess for quotient
     if (m_d[2] == n_n) {
         q = (1 << DIGIT_BITS) - 1;
@@ -372,6 +448,9 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
         q = m_dividend / n_n;
         LOG("reduce quotient: m_dividend=%x q=%x\r\n", m_dividend, q);
     }
+
+    TASK_BOUNDARY(REDUCE_QUOTIENT_3_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     // Refine quotient guess
 
@@ -388,6 +467,9 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
 
     q++;
     do {
+        TASK_BOUNDARY(REDUCE_QUOTIENT_4_TASK, NULL);
+        DINO_RESTORE_NONE();
+
         q--;
         // NOTE: yes, this result can be >16-bit because:
         //   n_n min = 0x80 (by constraint on modulus msb being set)
@@ -414,6 +496,9 @@ void reduce_quotient(digit_t *quotient, bigint_t m, const bigint_t n, unsigned d
     LOG("reduce: quotient: q=%x\r\n", q);
 
     *quotient = q;
+
+    TASK_BOUNDARY(REDUCE_QUOTIENT_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
 }
 
 void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
@@ -422,7 +507,8 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
     unsigned offset, c;
     digit_t p, nd;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_MULTIPLY_TASK, NULL);
+    TASK_BOUNDARY(REDUCE_MULTIPLY_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     // TODO: factor out shift outside of this task
     // As part of this task, we also perform the left-shifting of the q*m
@@ -438,6 +524,11 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
 
     c = 0;
     for (i = offset; i < 2 * NUM_DIGITS; ++i) {
+
+        //DINO_VERSION_PTR(product, bigint_t); // TODO: ver
+        TASK_BOUNDARY(REDUCE_MULTIPLY_LOOP_TASK, NULL);
+        DINO_RESTORE_NONE();
+        //DINO_RESTORE_PTR(product, bigint_t); // TODO: ver
 
         // This condition creates the left-shifted zeros.
         // TODO: consider adding number of digits to go along with the 'product' field,
@@ -461,6 +552,8 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
     }
 
     LOG("reduce: multiply: product = "); log_bigint(product, 2 * NUM_DIGITS); LOG("\r\n");
+    TASK_BOUNDARY(REDUCE_MULTIPLY_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
 }
 
 int reduce_compare(bigint_t a, bigint_t b)
@@ -468,7 +561,8 @@ int reduce_compare(bigint_t a, bigint_t b)
     int i;
     int relation = 0;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_COMPARE_TASK, NULL);
+    TASK_BOUNDARY(REDUCE_COMPARE_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     for (i = NUM_DIGITS * 2 - 1; i >= 0; --i) {
         if (a > b) {
@@ -480,6 +574,8 @@ int reduce_compare(bigint_t a, bigint_t b)
         }
     }
 
+    TASK_BOUNDARY(REDUCE_COMPARE_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
     return relation;
 }
 
@@ -489,7 +585,8 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
     unsigned offset, c;
     digit_t r, m, n;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_ADD_TASK, NULL);
+    TASK_BOUNDARY(REDUCE_ADD_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     // TODO: factor out shift outside of this task
     // Part of this task is to shift modulus by radix^(digit - NUM_DIGITS)
@@ -497,6 +594,11 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
 
     c = 0;
     for (i = offset; i < 2 * NUM_DIGITS; ++i) {
+
+        DINO_VERSION_PTR(a, bigint_t);
+        TASK_BOUNDARY(REDUCE_ADD_LOOP_TASK, NULL);
+        DINO_RESTORE_PTR(a, bigint_t);
+
         m = a[i];
 
         // Shifted index of the modulus digit
@@ -521,6 +623,9 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
     }
 
     LOG("reduce: add: sum = "); log_bigint(a, 2 * NUM_DIGITS); LOG("\r\n");
+
+    TASK_BOUNDARY(REDUCE_ADD_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
 }
 
 void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
@@ -529,7 +634,8 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
     digit_t m, s, r, qn;
     unsigned borrow, offset;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_SUBTRACT_TASK, NULL);
+    TASK_BOUNDARY(REDUCE_SUBTRACT_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     // TODO: factor out shifting logic from this task
     // The qn product had been shifted by this offset, no need to subtract the zeros
@@ -539,6 +645,10 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
 
     borrow = 0;
     for (i = offset; i < 2 * NUM_DIGITS; ++i) {
+        DINO_VERSION_PTR(a, bigint_t);
+        TASK_BOUNDARY(REDUCE_SUBTRACT_LOOP_TASK, NULL);
+        DINO_RESTORE_PTR(a, bigint_t);
+
         m = a[i];
 
         qn = b[i];
@@ -559,15 +669,19 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
     }
 
     LOG("reduce: subtract: sum = "); log_bigint(a, 2 * NUM_DIGITS); LOG("\r\n");
+
+    TASK_BOUNDARY(REDUCE_SUBTRACT_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
 }
 
 void reduce(bigint_t m, const bigint_t n)
 {
+
     digit_t q, m_d;
-    bigint_t qn;
     unsigned d;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(REDUCE_TASK, NULL);
+    TASK_BOUNDARY(REDUCE_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     // Start reduction loop at most significant non-zero digit
     d = 2 * NUM_DIGITS;
@@ -588,14 +702,17 @@ void reduce(bigint_t m, const bigint_t n)
 
     while (d >= NUM_DIGITS) {
         reduce_quotient(&q, m, n, d);
-        reduce_multiply(qn, q, n, d);
-        if (reduce_compare(m, qn) < 0)
+        reduce_multiply(qxn, q, n, d);
+        if (reduce_compare(m, qxn) < 0)
             reduce_add(m, n, d);
-        reduce_subtract(m, qn, d);
+        reduce_subtract(m, qxn, d);
         d--;
     }
 
     LOG("reduce: num = "); log_bigint(m, NUM_DIGITS); LOG("\r\n");
+
+    TASK_BOUNDARY(REDUCE_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
 }
 
 void mod_mult(bigint_t a, bigint_t b, const bigint_t n)
@@ -608,7 +725,8 @@ void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
 {
     int i;
 
-    DINO_TASK_BOUNDARY_WITH_VERSIONS(MOD_EXP_TASK, NULL);
+    TASK_BOUNDARY(MOD_EXP_TASK, NULL);
+    DINO_RESTORE_NONE();
 
     // Result initialized to 1
     out_block[0] = 0x1;
@@ -616,6 +734,9 @@ void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
         out_block[i] = 0x0;
 
     while (e > 0) {
+        TASK_BOUNDARY(MOD_EXP_LOOP_TASK, NULL);
+        DINO_RESTORE_NONE();
+
         LOG("mod exp: e=%x\r\n", e);
 
         if (e & 0x1)
@@ -623,15 +744,14 @@ void mod_exp(bigint_t out_block, bigint_t base, digit_t e, const bigint_t n)
         mod_mult(base, base, n);
         e >>= 1;
     }
-}
 
+    TASK_BOUNDARY(MOD_EXP_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
+}
 void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
              const uint8_t *message, unsigned message_length,
              const pubkey_t *k)
 {
-    // Store in NV memory to reduce RAM footprint (might not even fit in RAM)
-    static __nv bigint_t in_block;
-    static __nv bigint_t out_block;
 
     int i;
     unsigned in_block_offset, out_block_offset;
@@ -640,7 +760,8 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
     out_block_offset = 0;
     while (in_block_offset < message_length) {
 
-        DINO_TASK_BOUNDARY_WITH_VERSIONS(ENCRYPT_TASK, NULL);
+        TASK_BOUNDARY(ENCRYPT_TASK, NULL);
+        DINO_RESTORE_NONE();
 
         PRINTF("Blk offset: %u\r\n", in_block_offset);
 
@@ -667,6 +788,9 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
     }
 
     *cyphertext_len = out_block_offset;
+
+    TASK_BOUNDARY(ENCRYPT_DONE_TASK, NULL);
+    DINO_RESTORE_NONE();
 }
 
 void init()
@@ -699,7 +823,7 @@ void init()
     blink(1, SEC_TO_CYCLES * 5, LED1 | LED2);
 #endif
 
-    PRINTF(".\r\n");
+    PRINTF(".%u.\r\n", curtask);
 }
 
 int main()
@@ -713,7 +837,8 @@ int main()
     DINO_RESTORE_CHECK();
 
     while (1) {
-        DINO_TASK_BOUNDARY_WITH_VERSIONS(PRINT_PLAINTEXT_TASK, NULL);
+        TASK_BOUNDARY(PRINT_PLAINTEXT_TASK, NULL);
+        DINO_RESTORE_NONE();
 
         message_length = sizeof(PLAINTEXT) - 1; // exclude null byte
 
@@ -733,7 +858,8 @@ int main()
         GPIO(PORT_LED_1, OUT) &= ~BIT(PIN_LED_1);
 #endif
 
-        DINO_TASK_BOUNDARY_WITH_VERSIONS(PRINT_CYPHERTEXT_TASK, NULL);
+        TASK_BOUNDARY(PRINT_CYPHERTEXT_TASK, NULL);
+        DINO_RESTORE_NONE();
 
         ENERGY_GUARD_BEGIN();
         printf("Cyphertext:\r\n");
