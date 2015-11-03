@@ -62,9 +62,10 @@
 // For wisp-base
 uint8_t usrBank[USRBANK_SIZE];
 
-#ifdef DINO
+/* This is for progress reporting only */
+#define SET_CURTASK(t) curtask = t
 
-/*DINO Task Names*/
+/* Tasks */
 #define PRINT_PLAINTEXT_TASK            0
 #define ENCRYPT_TASK                    1
 #define MOD_EXP_TASK                    2
@@ -102,6 +103,8 @@ uint8_t usrBank[USRBANK_SIZE];
 #define REDUCE_MULTIPLY_DONE_TASK           33
 #define REDUCE_ADD_DONE_TASK                34
 #define REDUCE_SUBTRACT_DONE_TASK           35
+
+#ifdef DINO
 
 #if 0 // TODO: this is only for DINO with compiler support
       // NOTE: this code is not up to date
@@ -151,7 +154,7 @@ DINO_RECOVERY_ROUTINE_LIST_END()
 
 #define TASK_BOUNDARY(t, x) \
         DINO_TASK_BOUNDARY_MANUAL(x); \
-        curtask = t; \
+        SET_CURTASK(t); \
 
 #define DINO_RESTORE_NONE() \
         DINO_REVERT_BEGIN() \
@@ -169,8 +172,9 @@ DINO_RECOVERY_ROUTINE_LIST_END()
 
 #else // !DINO
 
+#define TASK_BOUNDARY(t, x) SET_CURTASK(t)
+
 #define DINO_RESTORE_CHECK()
-#define TASK_BOUNDARY(...)
 #define DINO_VERSION_PTR(...)
 #define DINO_VERSION_VAL(...)
 #define DINO_RESTORE_NONE()
