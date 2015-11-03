@@ -149,7 +149,7 @@ DINO_RECOVERY_ROUTINE_LIST_END()
 #endif
 
 #define TASK_BOUNDARY(t, x) \
-        DINO_TASK_BOUNDARY(t, x); \
+        DINO_TASK_BOUNDARY_MANUAL(x); \
         curtask = t; \
 
 #define DINO_RESTORE_NONE() \
