@@ -765,7 +765,7 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
         TASK_BOUNDARY(ENCRYPT_TASK, NULL);
         DINO_RESTORE_NONE();
 
-        PRINTF("Blk offset: %u\r\n", in_block_offset);
+        LOG("Blk offset: %u\r\n", in_block_offset);
 
         for (i = 0; i < NUM_DIGITS - NUM_PAD_DIGITS; ++i)
             in_block[i] = (in_block_offset + i < message_length) ?
