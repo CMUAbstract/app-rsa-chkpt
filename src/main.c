@@ -59,10 +59,6 @@
 
 #endif // !VERBOSE*
 
-#define PORT_LED_DIR P1DIR
-#define PORT_LED_OUT P1OUT
-#define PIN_LED      1
-
 #if defined(CONFIG_LIBEDB_PRINTF_EIF) || defined(CONFIG_LIBEDB_PRINTF_BARE)
 
 // The multi-statement printf, is...
