@@ -26,6 +26,7 @@
 
 // #define VERBOSE
 // #define SHOW_PROGRESS_ON_LED
+// #define BLOCK_DELAY
 
 #ifdef VERBOSE
 #define LOG printf
@@ -652,7 +653,7 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
         in_block_offset += NUM_DIGITS - NUM_PAD_DIGITS;
         out_block_offset += NUM_DIGITS;
 
-#ifdef VERBOSE
+#ifdef BLOCK_DELAY
         uint32_t delay = 0xfffff;
         while (delay--);
 #endif
