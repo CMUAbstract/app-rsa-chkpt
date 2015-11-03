@@ -183,6 +183,18 @@ DINO_RECOVERY_ROUTINE_LIST_END()
 
 #endif // !DINO
 
+/* Must be defined before we disable __nv */
+static __nv unsigned curtask;
+
+// Mementos is not safe for nonvolatile state
+// TODO: the __ro_nv can be excluded, but this requires patching Mementos
+#ifdef MEMENTOS
+#undef __nv
+#undef __ro_nv
+#define __nv
+#define __ro_nv
+#endif // MEMENTOS
+
 #include "../data/keysize.h"
 
 #define DIGIT_BITS       8 // arithmetic ops take 8-bit args produce 16-bit result
@@ -240,8 +252,6 @@ static __nv bigint_t in_block;
 static __nv bigint_t out_block;
 static __nv bigint_t qxn;
 static __nv bigint_t product;
-
-static __nv unsigned curtask;
 
 #ifdef SHOW_PROGRESS_ON_LED
 static void delay(uint32_t cycles)
