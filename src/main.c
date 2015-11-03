@@ -29,35 +29,77 @@
 // #define SHOW_PROGRESS_ON_LED
 // #define BLOCK_DELAY
 
+
+#if defined(VERBOSE) || defined(VERBOSE2)
+
+#define BLOCK_LOG_BEGIN() BLOCK_PRINTF_BEGIN()
+#define BLOCK_LOG(...)    BLOCK_PRINTF(__VA_ARGS__)
+#define BLOCK_LOG_END()   BLOCK_PRINTF_END()
+
 #ifdef VERBOSE
 #define LOG PRINTF
+#else
+#define LOG(...)
+#endif
+
 #ifdef VERBOSE2
 #define LOG2 PRINTF
 #else // !VERBOSE2
 #define LOG2(...)
 #endif // !VERBOSE2
-#else
+
+#else // !VERBOSE*
+
 #define LOG(...)
 #define LOG2(...)
-#endif // VERBOSE
+
+#define BLOCK_LOG_BEGIN()
+#define BLOCK_LOG(...)
+#define BLOCK_LOG_END()
+
+#endif // !VERBOSE*
 
 #define PORT_LED_DIR P1DIR
 #define PORT_LED_OUT P1OUT
 #define PIN_LED      1
 
-#if !defined(CONFIG_LIBEDB_PRINTF_EIF) && !defined(CONFIG_LIBEDB_PRINTF_BARE)
-#define PRINTF(...) printf(__VA_ARGS__)
+#if defined(CONFIG_LIBEDB_PRINTF_EIF) || defined(CONFIG_LIBEDB_PRINTF_BARE)
+
+// The multi-statement printf, is...
+#define BLOCK_PRINTF_BEGIN() ENERGY_GUARD_BEGIN()
+#define BLOCK_PRINTF(...) BARE_PRINTF(__VA_ARGS__)
+#define BLOCK_PRINTF_END() ENERGY_GUARD_END()
+
+// By default, printf is...
+#if defined(CONFIG_LIBEDB_PRINTF_EIF)
+#define PRINTF(...) EIF_PRINTF(__VA_ARGS__)
+#elif defined(CONFIG_LIBEDB_PRINTF_BARE)
+#define PRINTF(...) BARE_PRINTF(__VA_ARGS__)
 #endif
 
-#if defined(CONFIG_LIBEDB_PRINTF_EIF)
-#define printf(...) PRINTF(__VA_ARGS__)
-#elif defined(CONFIG_LIBEDB_PRINTF_BARE)
-#define printf(...) BARE_PRINTF(__VA_ARGS__)
 #elif defined(CONFIG_LIBMSPCONSOLE_PRINTF)
-// nothing to to do
-#else
-#define printf(...)
-#endif
+
+// All special printfs fall back to the regular printf
+#define BLOCK_PRINTF_BEGIN()
+#define BLOCK_PRINTF(...) printf(__VA_ARGS__)
+#define BLOCK_PRINTF_END()
+
+#define EIF_PRINTF(...)  printf(__VA_ARGS__)
+#define BARE_PRINTF(...) printf(__VA_ARGS__)
+
+#else // no printf
+
+// All printfs fall back to nop
+#define BLOCK_PRINTF_BEGIN()
+#define BLOCK_PRINTF(...)
+#define BLOCK_PRINTF_END()
+
+#define PRINTF(...)
+
+#define EIF_PRINTF(...)
+#define BARE_PRINTF(...)
+
+#endif // no printf
 
 // For wisp-base
 uint8_t usrBank[USRBANK_SIZE];
@@ -289,6 +331,13 @@ void log_bigint(const bigint_t n, unsigned digits)
         LOG("%02x ", n[i]);
 }
 
+void block_log_bigint(const bigint_t n, unsigned digits)
+{
+    int i;
+    for (i = digits - 1; i >= 0; --i)
+        BLOCK_LOG("%02x ", n[i]);
+}
+
 void print_hex_ascii(const uint8_t *m, unsigned len)
 {
     int i, j;
@@ -320,8 +369,10 @@ void mult(bigint_t a, bigint_t b)
     TASK_BOUNDARY(MULT_TASK, NULL);
     DINO_RESTORE_NONE();
 
-    LOG("mult: a = "); log_bigint(a, NUM_DIGITS); LOG("\r\n");
-    LOG("mult: b = "); log_bigint(b, NUM_DIGITS); LOG("\r\n");
+    BLOCK_LOG_BEGIN();
+    BLOCK_LOG("mult: a = "); block_log_bigint(a, NUM_DIGITS); BLOCK_LOG("\r\n");
+    BLOCK_LOG("mult: b = "); block_log_bigint(b, NUM_DIGITS); BLOCK_LOG("\r\n");
+    BLOCK_LOG_END();
 
     for (digit = 0; digit < NUM_DIGITS * 2; ++digit) {
         LOG2("mult: d=%u\r\n", digit);
@@ -352,7 +403,11 @@ void mult(bigint_t a, bigint_t b)
     TASK_BOUNDARY(MULT_COPY_TASK, NULL);
     DINO_RESTORE_NONE();
 
-    LOG("mult: product = "); log_bigint(product, 2 * NUM_DIGITS); LOG("\r\n");
+    BLOCK_LOG_BEGIN();
+    BLOCK_LOG("mult: product = ");
+    block_log_bigint(product, 2 * NUM_DIGITS);
+    BLOCK_LOG("\r\n");
+    BLOCK_LOG_END();
 
     for (i = 0; i < 2 * NUM_DIGITS; ++i)
         a[i] = product[i];
@@ -789,9 +844,19 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
         for (i = 0; i < NUM_PAD_DIGITS; ++i)
             in_block[NUM_DIGITS - NUM_PAD_DIGITS + i] = PAD_DIGITS[i];
 
-        LOG("in block: "); log_bigint(in_block, NUM_DIGITS); LOG("\r\n");
+        BLOCK_LOG_BEGIN();
+        BLOCK_LOG("in block: ");
+        block_log_bigint(in_block, NUM_DIGITS);
+        BLOCK_LOG("\r\n");
+        BLOCK_LOG_END();
+
         mod_exp(out_block, in_block, k->e, k->n);
-        LOG("out block: "); log_bigint(out_block, NUM_DIGITS); LOG("\r\n");
+
+        BLOCK_LOG_BEGIN();
+        BLOCK_LOG("out block: ");
+        block_log_bigint(out_block, NUM_DIGITS);
+        BLOCK_LOG("\r\n");
+        BLOCK_LOG_END();
 
         for (i = 0; i < NUM_DIGITS; ++i)
             cyphertext[out_block_offset + i] = out_block[i];
@@ -841,7 +906,7 @@ void init()
     blink(1, SEC_TO_CYCLES * 5, LED1 | LED2);
 #endif
 
-    PRINTF(".%u.\r\n", curtask);
+    EIF_PRINTF(".%u.\r\n", curtask);
 }
 
 int main()
