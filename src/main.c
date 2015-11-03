@@ -552,7 +552,7 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
         }
         r = m - s;
 
-        LOG("reduce: subtract: m[%u]=%x qn[%u]=%x b=%u r=%x\r\n",
+        LOG2("reduce: subtract: m[%u]=%x qn[%u]=%x b=%u r=%x\r\n",
                i, m, i, qn, borrow, r);
 
         a[i] = r;
