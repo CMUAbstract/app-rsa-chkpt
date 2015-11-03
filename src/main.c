@@ -162,6 +162,11 @@ DINO_RECOVERY_ROUTINE_LIST_END()
         DINO_REVERT_PTR(type, nm); \
         DINO_REVERT_END() \
 
+#define DINO_RESTORE_VAL(nm, label) \
+        DINO_REVERT_BEGIN() \
+        DINO_REVERT_VAL(nm, label); \
+        DINO_REVERT_END() \
+
 #else // !DINO
 
 #define DINO_RESTORE_CHECK()
@@ -388,9 +393,9 @@ void reduce_normalize(bigint_t m, const bigint_t n, unsigned digit)
     borrow = 0;
     for (i = 0; i < NUM_DIGITS; ++i) {
 
-        DINO_VERSION_PTR(m, bigint_t);
+        DINO_VERSION_VAL(digit_t, m[i + offset], m_d);
         TASK_BOUNDARY(REDUCE_NORMALIZE_LOOP_TASK, NULL);
-        DINO_RESTORE_PTR(m, bigint_t);
+        DINO_RESTORE_VAL(m[i + offset], m_d);
 
         m_d = m[i + offset];
         n_d = n[i];
@@ -592,9 +597,9 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
     c = 0;
     for (i = offset; i < 2 * NUM_DIGITS; ++i) {
 
-        DINO_VERSION_PTR(a, bigint_t);
+        DINO_VERSION_VAL(digit_t, a[i], a_i);
         TASK_BOUNDARY(REDUCE_ADD_LOOP_TASK, NULL);
-        DINO_RESTORE_PTR(a, bigint_t);
+        DINO_RESTORE_VAL(a[i], a_i);
 
         m = a[i];
 
@@ -642,9 +647,9 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
 
     borrow = 0;
     for (i = offset; i < 2 * NUM_DIGITS; ++i) {
-        DINO_VERSION_PTR(a, bigint_t);
+        DINO_VERSION_VAL(digit_t, a[i], a_i);
         TASK_BOUNDARY(REDUCE_SUBTRACT_LOOP_TASK, NULL);
-        DINO_RESTORE_PTR(a, bigint_t);
+        DINO_RESTORE_VAL(a[i], a_i);
 
         m = a[i];
 
