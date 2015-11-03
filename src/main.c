@@ -24,14 +24,21 @@
 
 #include "pins.h"
 
-// #define VERBOSE
+#define VERBOSE
+// #define VERBOSE2
 // #define SHOW_PROGRESS_ON_LED
 // #define BLOCK_DELAY
 
 #ifdef VERBOSE
-#define LOG printf
+#define LOG PRINTF
+#ifdef VERBOSE2
+#define LOG2 PRINTF
+#else // !VERBOSE2
+#define LOG2(...)
+#endif // !VERBOSE2
 #else
 #define LOG(...)
+#define LOG2(...)
 #endif // VERBOSE
 
 #define PORT_LED_DIR P1DIR
@@ -257,7 +264,7 @@ void mult(bigint_t a, bigint_t b)
                 c += dp >> DIGIT_BITS;
                 p += dp & DIGIT_MASK;
 
-                LOG("mult: i=%u a=%x b=%x dp=%x p=%x\r\n", i, a[digit - i], b[i], dp, p);
+                LOG2("mult: i=%u a=%x b=%x dp=%x p=%x\r\n", i, a[digit - i], b[i], dp, p);
             }
         }
 
@@ -290,7 +297,7 @@ bool reduce_normalizable(bigint_t m, const bigint_t n, unsigned d)
         m_d = m[i];
         n_d = n[i - offset];
 
-        LOG("normalizable: m[%u]=%x n[%u]=%x\r\n", i, m_d, i - offset, n_d);
+        LOG2("normalizable: m[%u]=%x n[%u]=%x\r\n", i, m_d, i - offset, n_d);
 
         if (m_d > n_d) {
             break;
@@ -329,7 +336,7 @@ void reduce_normalize(bigint_t m, const bigint_t n, unsigned digit)
         }
         d = m_d - s;
 
-        LOG("normalize: m[%u]=%x n[%u]=%x b=%u d=%x\r\n",
+        LOG2("normalize: m[%u]=%x n[%u]=%x b=%u d=%x\r\n",
                 i + offset, m_d, i, n_d, borrow, d);
 
         m[i + offset] = d;
@@ -444,7 +451,7 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
             // TODO: could break out of the loop  in this case (after CHAN_OUT)
         }
 
-        LOG("reduce: multiply: n[%u]=%x q=%x c=%x m[%u]=%x\r\n",
+        LOG2("reduce: multiply: n[%u]=%x q=%x c=%x m[%u]=%x\r\n",
                i - offset, nd, q, c, i, p);
 
         c = p >> DIGIT_BITS;
@@ -505,7 +512,7 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
 
         r = c + m + n;
 
-        LOG("reduce: add: m[%u]=%x n[%u]=%x c=%x r=%x\r\n", i, m, j, n, c, r);
+        LOG2("reduce: add: m[%u]=%x n[%u]=%x c=%x r=%x\r\n", i, m, j, n, c, r);
 
         c = r >> DIGIT_BITS;
         r &= DIGIT_MASK;
