@@ -841,11 +841,7 @@ void init()
     blink(1, SEC_TO_CYCLES * 5, LED1 | LED2);
 #endif
 
-#ifdef MEMENTOS // TODO: why does mementos break debug mode?
-    printf(".%u.\r\n", curtask);
-#else
     PRINTF(".%u.\r\n", curtask);
-#endif
 }
 
 int main()
@@ -864,15 +860,11 @@ int main()
 
         message_length = sizeof(PLAINTEXT) - 1; // exclude null byte
 
-#ifndef MEMENTOS // TODO: why does mementos break debug mode?
         ENERGY_GUARD_BEGIN();
-#endif
         printf("Message:\r\n"); print_hex_ascii(PLAINTEXT, message_length);
         printf("Public key: exp = %x modulus =\r\n", pubkey.e);
         print_hex_ascii((uint8_t*)pubkey.n, NUM_DIGITS * 2); // TODO: bigint bytes
-#ifndef MEMENTOS
         ENERGY_GUARD_END();
-#endif
 
 #ifdef SHOW_PROGRESS_ON_LED
         GPIO(PORT_LED_1, OUT) |= BIT(PIN_LED_1);
@@ -887,14 +879,10 @@ int main()
         TASK_BOUNDARY(PRINT_CYPHERTEXT_TASK, NULL);
         DINO_RESTORE_NONE();
 
-#ifndef MEMENTOS
         ENERGY_GUARD_BEGIN();
-#endif
         printf("Cyphertext:\r\n");
         print_hex_ascii(CYPHERTEXT, CYPHERTEXT_LEN);
-#ifndef MEMENTOS
         ENERGY_GUARD_END();
-#endif
 
 #ifdef SHOW_PROGRESS_ON_LED
         blink(1, SEC_TO_CYCLES, LED2);
