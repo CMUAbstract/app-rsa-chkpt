@@ -380,9 +380,7 @@ void reduce_normalize(bigint_t m, const bigint_t n, unsigned digit)
     digit_t d, s, m_d, n_d;
     unsigned borrow, offset;
 
-    DINO_VERSION_PTR(m, bigint_t);
     TASK_BOUNDARY(REDUCE_NORMALIZE_TASK, NULL);
-    DINO_RESTORE_PTR(m, bigint_t);
 
     offset = digit + 1 - NUM_DIGITS; // TODO: can this go below zero
 
@@ -525,10 +523,8 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
     c = 0;
     for (i = offset; i < 2 * NUM_DIGITS; ++i) {
 
-        //DINO_VERSION_PTR(product, bigint_t); // TODO: ver
         TASK_BOUNDARY(REDUCE_MULTIPLY_LOOP_TASK, NULL);
         DINO_RESTORE_NONE();
-        //DINO_RESTORE_PTR(product, bigint_t); // TODO: ver
 
         // This condition creates the left-shifted zeros.
         // TODO: consider adding number of digits to go along with the 'product' field,
