@@ -172,8 +172,10 @@ DINO_RECOVERY_ROUTINE_LIST_END()
 #define DINO_RESTORE_CHECK()
 #define TASK_BOUNDARY(...)
 #define DINO_VERSION_PTR(...)
+#define DINO_VERSION_VAL(...)
 #define DINO_RESTORE_NONE()
 #define DINO_RESTORE_PTR(...)
+#define DINO_RESTORE_VAL(...)
 
 #endif // !DINO
 
