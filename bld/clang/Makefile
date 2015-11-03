@@ -17,6 +17,7 @@ CFLAGS += \
 	-I$(LIBMSP_ROOT)/src/include \
 	-I$(LIBMSPMATH_ROOT)/src/include \
 	-I$(LIBMSPBUILTINS_ROOT)/src/include \
+	-I$(LIBIO_ROOT)/src/include \
 
 LLVM_LIBS += \
 	$(LIBMSPMATH_ROOT)/bld/clang/libmspmath.a.bc \

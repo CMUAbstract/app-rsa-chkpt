@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include <libmsp/mem.h>
+#include <libio/log.h>
 #include <wisp-base.h>
 #include <msp-math.h>
 #include <msp-builtins.h>
@@ -28,74 +29,6 @@
 // #define VERBOSE2
 // #define SHOW_PROGRESS_ON_LED
 // #define BLOCK_DELAY
-
-
-#if defined(VERBOSE) || defined(VERBOSE2)
-
-#define BLOCK_LOG_BEGIN() BLOCK_PRINTF_BEGIN()
-#define BLOCK_LOG(...)    BLOCK_PRINTF(__VA_ARGS__)
-#define BLOCK_LOG_END()   BLOCK_PRINTF_END()
-
-#ifdef VERBOSE
-#define LOG PRINTF
-#else
-#define LOG(...)
-#endif
-
-#ifdef VERBOSE2
-#define LOG2 PRINTF
-#else // !VERBOSE2
-#define LOG2(...)
-#endif // !VERBOSE2
-
-#else // !VERBOSE*
-
-#define LOG(...)
-#define LOG2(...)
-
-#define BLOCK_LOG_BEGIN()
-#define BLOCK_LOG(...)
-#define BLOCK_LOG_END()
-
-#endif // !VERBOSE*
-
-#if defined(CONFIG_LIBEDB_PRINTF_EIF) || defined(CONFIG_LIBEDB_PRINTF_BARE)
-
-// The multi-statement printf, is...
-#define BLOCK_PRINTF_BEGIN() ENERGY_GUARD_BEGIN()
-#define BLOCK_PRINTF(...) BARE_PRINTF(__VA_ARGS__)
-#define BLOCK_PRINTF_END() ENERGY_GUARD_END()
-
-// By default, printf is...
-#if defined(CONFIG_LIBEDB_PRINTF_EIF)
-#define PRINTF(...) EIF_PRINTF(__VA_ARGS__)
-#elif defined(CONFIG_LIBEDB_PRINTF_BARE)
-#define PRINTF(...) BARE_PRINTF(__VA_ARGS__)
-#endif
-
-#elif defined(CONFIG_LIBMSPCONSOLE_PRINTF)
-
-// All special printfs fall back to the regular printf
-#define BLOCK_PRINTF_BEGIN()
-#define BLOCK_PRINTF(...) printf(__VA_ARGS__)
-#define BLOCK_PRINTF_END()
-
-#define EIF_PRINTF(...)  printf(__VA_ARGS__)
-#define BARE_PRINTF(...) printf(__VA_ARGS__)
-
-#else // no printf
-
-// All printfs fall back to nop
-#define BLOCK_PRINTF_BEGIN()
-#define BLOCK_PRINTF(...)
-#define BLOCK_PRINTF_END()
-
-#define PRINTF(...)
-
-#define EIF_PRINTF(...)
-#define BARE_PRINTF(...)
-
-#endif // no printf
 
 // For wisp-base
 uint8_t usrBank[USRBANK_SIZE];
