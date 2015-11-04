@@ -8,7 +8,7 @@ CONFIG_EDB ?= 1
 CONFIG_PRINTF_LIB ?= libedb
 CONFIG_LIBEDB_PRINTF ?= eif
 
-MEMENTOS_IGNORE_GLOBALS ?= 1
+MEMENTOS_IGNORE_GLOBALS ?= 0
 
 include $(MAKER_ROOT)/Makefile.mementos
 include $(MAKER_ROOT)/Makefile.board
