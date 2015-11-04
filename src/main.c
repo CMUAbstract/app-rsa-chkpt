@@ -152,17 +152,7 @@ DINO_RECOVERY_ROUTINE_LIST_END()
 
 #endif // !DINO
 
-/* Must be defined before we disable __nv */
 static __nv unsigned curtask;
-
-// Mementos is not safe for nonvolatile state
-// TODO: the __ro_nv can be excluded, but this requires patching Mementos
-#ifdef MEMENTOS
-#undef __nv
-#undef __ro_nv
-#define __nv
-#define __ro_nv
-#endif // MEMENTOS
 
 #include "../data/keysize.h"
 
@@ -217,10 +207,17 @@ static __nv uint8_t CYPHERTEXT[CYPHERTEXT_SIZE] = {0};
 static __nv unsigned CYPHERTEXT_LEN = 0;
 
 // Store in NV memory to reduce RAM footprint (might not even fit in RAM)
+// Except with Mementos, which cannot handle NV state. With mementos
+// these are allocated on the stack. Allocting them on the stack as
+// opposed to letting them be (volatile) globals is a workaround
+// for Mementos including the read-only globals into the checkpoint,
+// if it is told to include any globals at all.
+#ifndef MEMENTOS
 static __nv bigint_t in_block;
 static __nv bigint_t out_block;
 static __nv bigint_t qxn;
 static __nv bigint_t product;
+#endif
 
 #ifdef SHOW_PROGRESS_ON_LED
 static void delay(uint32_t cycles)
@@ -280,6 +277,10 @@ void print_hex_ascii(const uint8_t *m, unsigned len)
 
 void mult(bigint_t a, bigint_t b)
 {
+#ifdef MEMENTOS
+    bigint_t product = {0};
+#endif
+
     int i;
     unsigned digit;
     digit_t p, c, dp;
@@ -682,6 +683,9 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
 
 void reduce(bigint_t m, const bigint_t n)
 {
+#ifdef MEMENTOS
+    bigint_t qxn = {0};
+#endif
 
     digit_t q, m_d;
     unsigned d;
@@ -762,6 +766,9 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
              const uint8_t *message, unsigned message_length,
              const pubkey_t *k)
 {
+#ifdef MEMENTOS
+    bigint_t in_block = {0}, out_block = {0};
+#endif
 
     int i;
     unsigned in_block_offset, out_block_offset;
