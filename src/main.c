@@ -25,8 +25,6 @@
 
 #include "pins.h"
 
-// #define VERBOSE
-// #define VERBOSE2
 // #define SHOW_PROGRESS_ON_LED
 // #define BLOCK_DELAY
 
@@ -250,17 +248,10 @@ void print_bigint(const bigint_t n, unsigned digits)
 {
     int i;
     for (i = digits - 1; i >= 0; --i)
-        printf("%02x ", n[i]);
+        PRINTF("%02x ", n[i]);
 }
 
 void log_bigint(const bigint_t n, unsigned digits)
-{
-    int i;
-    for (i = digits - 1; i >= 0; --i)
-        LOG("%02x ", n[i]);
-}
-
-void block_log_bigint(const bigint_t n, unsigned digits)
 {
     int i;
     for (i = digits - 1; i >= 0; --i)
@@ -273,17 +264,17 @@ void print_hex_ascii(const uint8_t *m, unsigned len)
    
     for (i = 0; i < len; i += PRINT_HEX_ASCII_COLS) {
         for (j = 0; j < PRINT_HEX_ASCII_COLS && i + j < len; ++j)
-            printf("%02x ", m[i + j]);
+            BLOCK_PRINTF("%02x ", m[i + j]);
         for (; j < PRINT_HEX_ASCII_COLS; ++j)
-            printf("   ");
-        printf(" ");
+            BLOCK_PRINTF("   ");
+        BLOCK_PRINTF(" ");
         for (j = 0; j < PRINT_HEX_ASCII_COLS && i + j < len; ++j) {
             char c = m[i + j];
             if (!(32 <= c && c <= 127)) // not printable
                 c = '.';
-            printf("%c", c);
+            BLOCK_PRINTF("%c", c);
         }
-        printf("\r\n");
+        BLOCK_PRINTF("\r\n");
     }
 }
 
@@ -299,8 +290,8 @@ void mult(bigint_t a, bigint_t b)
     DINO_RESTORE_NONE();
 
     BLOCK_LOG_BEGIN();
-    BLOCK_LOG("mult: a = "); block_log_bigint(a, NUM_DIGITS); BLOCK_LOG("\r\n");
-    BLOCK_LOG("mult: b = "); block_log_bigint(b, NUM_DIGITS); BLOCK_LOG("\r\n");
+    BLOCK_LOG("mult: a = "); log_bigint(a, NUM_DIGITS); BLOCK_LOG("\r\n");
+    BLOCK_LOG("mult: b = "); log_bigint(b, NUM_DIGITS); BLOCK_LOG("\r\n");
     BLOCK_LOG_END();
 
     for (digit = 0; digit < NUM_DIGITS * 2; ++digit) {
@@ -334,7 +325,7 @@ void mult(bigint_t a, bigint_t b)
 
     BLOCK_LOG_BEGIN();
     BLOCK_LOG("mult: product = ");
-    block_log_bigint(product, 2 * NUM_DIGITS);
+    log_bigint(product, 2 * NUM_DIGITS);
     BLOCK_LOG("\r\n");
     BLOCK_LOG_END();
 
@@ -553,7 +544,12 @@ void reduce_multiply(bigint_t product, digit_t q, const bigint_t n, unsigned d)
         product[i] = p;
     }
 
-    LOG("reduce: multiply: product = "); log_bigint(product, 2 * NUM_DIGITS); LOG("\r\n");
+    BLOCK_LOG_BEGIN();
+    BLOCK_LOG("reduce: multiply: product = ");
+    log_bigint(product, 2 * NUM_DIGITS);
+    BLOCK_LOG("\r\n");
+    BLOCK_LOG_END();
+
     TASK_BOUNDARY(REDUCE_MULTIPLY_DONE_TASK, NULL);
     DINO_RESTORE_NONE();
 }
@@ -624,7 +620,11 @@ void reduce_add(bigint_t a, const bigint_t b, unsigned d)
         a[i] = r;
     }
 
-    LOG("reduce: add: sum = "); log_bigint(a, 2 * NUM_DIGITS); LOG("\r\n");
+    BLOCK_LOG_BEGIN();
+    BLOCK_LOG("reduce: add: sum = ");
+    log_bigint(a, 2 * NUM_DIGITS);
+    BLOCK_LOG("\r\n");
+    BLOCK_LOG_END();
 
     TASK_BOUNDARY(REDUCE_ADD_DONE_TASK, NULL);
     DINO_RESTORE_NONE();
@@ -670,7 +670,11 @@ void reduce_subtract(bigint_t a, bigint_t b, unsigned d)
         a[i] = r;
     }
 
-    LOG("reduce: subtract: sum = "); log_bigint(a, 2 * NUM_DIGITS); LOG("\r\n");
+    BLOCK_LOG_BEGIN();
+    BLOCK_LOG("reduce: subtract: sum = ");
+    log_bigint(a, 2 * NUM_DIGITS);
+    BLOCK_LOG("\r\n");
+    BLOCK_LOG_END();
 
     TASK_BOUNDARY(REDUCE_SUBTRACT_DONE_TASK, NULL);
     DINO_RESTORE_NONE();
@@ -711,7 +715,11 @@ void reduce(bigint_t m, const bigint_t n)
         d--;
     }
 
-    LOG("reduce: num = "); log_bigint(m, NUM_DIGITS); LOG("\r\n");
+    BLOCK_LOG_BEGIN();
+    BLOCK_LOG("reduce: num = ");
+    log_bigint(m, NUM_DIGITS);
+    BLOCK_LOG("\r\n");
+    BLOCK_LOG_END();
 
     TASK_BOUNDARY(REDUCE_DONE_TASK, NULL);
     DINO_RESTORE_NONE();
@@ -775,7 +783,7 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
 
         BLOCK_LOG_BEGIN();
         BLOCK_LOG("in block: ");
-        block_log_bigint(in_block, NUM_DIGITS);
+        log_bigint(in_block, NUM_DIGITS);
         BLOCK_LOG("\r\n");
         BLOCK_LOG_END();
 
@@ -783,7 +791,7 @@ void encrypt(uint8_t *cyphertext, unsigned *cyphertext_len,
 
         BLOCK_LOG_BEGIN();
         BLOCK_LOG("out block: ");
-        block_log_bigint(out_block, NUM_DIGITS);
+        log_bigint(out_block, NUM_DIGITS);
         BLOCK_LOG("\r\n");
         BLOCK_LOG_END();
 
@@ -854,11 +862,12 @@ int main()
 
         message_length = sizeof(PLAINTEXT) - 1; // exclude null byte
 
-        ENERGY_GUARD_BEGIN();
-        printf("Message:\r\n"); print_hex_ascii(PLAINTEXT, message_length);
-        printf("Public key: exp = %x modulus =\r\n", pubkey.e);
+        BLOCK_PRINTF_BEGIN();
+        BLOCK_PRINTF("Message:\r\n");
+        print_hex_ascii(PLAINTEXT, message_length);
+        BLOCK_PRINTF("Public key: exp = %x modulus =\r\n", pubkey.e);
         print_hex_ascii((uint8_t*)pubkey.n, NUM_DIGITS * 2); // TODO: bigint bytes
-        ENERGY_GUARD_END();
+        BLOCK_PRINTF_END();
 
 #ifdef SHOW_PROGRESS_ON_LED
         GPIO(PORT_LED_1, OUT) |= BIT(PIN_LED_1);
@@ -873,10 +882,10 @@ int main()
         TASK_BOUNDARY(PRINT_CYPHERTEXT_TASK, NULL);
         DINO_RESTORE_NONE();
 
-        ENERGY_GUARD_BEGIN();
-        printf("Cyphertext:\r\n");
+        BLOCK_PRINTF_BEGIN();
+        BLOCK_PRINTF("Cyphertext:\r\n");
         print_hex_ascii(CYPHERTEXT, CYPHERTEXT_LEN);
-        ENERGY_GUARD_END();
+        BLOCK_PRINTF_END();
 
 #ifdef SHOW_PROGRESS_ON_LED
         blink(1, SEC_TO_CYCLES, LED2);
