@@ -828,11 +828,7 @@ void init()
     debug_setup();
 #endif
 
-#if defined(CONFIG_LIBEDB_PRINTF_BARE)
-    BARE_PRINTF_ENABLE();
-#elif defined(CONFIG_LIBMSPCONSOLE_PRINTF)
-    UART_init();
-#endif
+    INIT_CONSOLE();
 
     __enable_interrupt();
 
